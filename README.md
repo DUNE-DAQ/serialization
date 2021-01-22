@@ -42,3 +42,29 @@ If your type is specified via a `moo` schema, you just need to `moo render` your
 ### Without [`moo`](https://github.com/brettviren/moo)
 
 If your class is not specified via a `moo` schema, it can be made serializable by adding convertor functions for `nlohmann::json` and `msgpack`. (Right now, _both_ methods need to be implemented, even if you only plan to use one of them. Maybe this could be changed, but the serialization type can come from config, and not necessarily be known at compile-time, so code for both has to be available). Full instructions for serializing arbitrary types with `nlohmann::json` are available [here](https://nlohmann.github.io/json/features/arbitrary_types/) and for `msgpack`, [here](https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_packer).
+
+The easiest way to achieve this is with the convenience macros provided by the two packages, eg:
+
+```cpp
+// A type that's made serializable "intrusively", ie, by changing the type itself
+struct MyTypeIntrusive
+{
+  int i;
+  std::string s;
+  std::vector<double> v;
+
+  // These are the macros that make the type serializable by MsgPack
+  // and nlohmann::json respectively. Both are needed in order to use
+  // the functions in `dunedaq::serialization`. There are some quirks:
+  //
+  // * MSGPACK_DEFINE should _not_ be followed by a `;`, in order to
+  //   avoid a warning
+  //
+  // * The NLOHMANN macro requires the class name as its first
+  //   argument, while MSGPACK_DEFINE does not
+  MSGPACK_DEFINE(i, s, v)
+  NLOHMANN_DEFINE_TYPE_INTRUSIVE(MyTypeIntrusive, i, s, v);
+};
+```
+
+A complete example can be found in [`non_moo_type.cxx`](./test/apps/non_moo_type.cxx).
