@@ -68,3 +68,7 @@ struct MyTypeIntrusive
 ```
 
 A complete example can be found in [`non_moo_type.cxx`](./test/apps/non_moo_type.cxx).
+
+## Design notes
+
+Choice of serialization methods: there are many, many libraries and formats for serialization/deserialization, with a range of tradeoffs. I chose `nlohmann::json` and `msgpack` to get one human-readable format, and one faster binary format. `nlohmann::json` is chosen as the library for the human-readable format since it was already being used in DUNE DAQ code. For the binary format, I wanted a library that allows serialization of arbitrary types, rather than requiring types to be specified in, eg the library's DSL (this rules out, eg, `protobuf`). We may have to revisit that requirement if we find that `msgpack` does not meet performance requirements.
