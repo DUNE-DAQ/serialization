@@ -1,6 +1,6 @@
 # DUNE DAQ C++ object serialization utilities
 
-This repository contains utilities for serializing/deserializing C++ objects for DUNE DAQ
+This repository contains utilities for serializing/deserializing C++ objects for DUNE DAQ. Serialization allows objects to be sent across the network or persisted to disk.
 
 ## Quick start
 
@@ -41,7 +41,7 @@ If your type is specified via a `moo` schema, you just need to `moo render` your
 
 ### Without [`moo`](https://github.com/brettviren/moo)
 
-If your class is not specified via a `moo` schema, it can be made serializable by adding convertor functions for `nlohmann::json` and `msgpack`. (Right now, _both_ methods need to be implemented, even if you only plan to use one of them. Maybe this could be changed, but the serialization type can come from config, and not necessarily be known at compile-time, so code for both has to be available). Full instructions for serializing arbitrary types with `nlohmann::json` are available [here](https://nlohmann.github.io/json/features/arbitrary_types/) and for `msgpack`, [here](https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_packer).
+If your class is not specified via a `moo` schema, it can be made serializable by adding convertor functions for `nlohmann::json` and `msgpack`. (Right now, _both_ methods need to be implemented, even if you only plan to use one of them. Maybe this could be changed, but the serialization type can come from config, and might not necessarily be known at compile-time, so code for both has to be available). Full instructions for serializing arbitrary types with `nlohmann::json` are available [here](https://nlohmann.github.io/json/features/arbitrary_types/) and for `msgpack`, [here](https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_packer).
 
 The easiest way to achieve this is with the convenience macros provided by the two packages, eg:
 
@@ -67,7 +67,7 @@ struct MyTypeIntrusive
 };
 ```
 
-A complete example can be found in [`non_moo_type.cxx`](./test/apps/non_moo_type.cxx).
+A complete example can be found in [`non_moo_type.cxx`](./test/apps/non_moo_type.cxx), including an example of how to make a class serializable "non-intrusively", ie, without changes to the class itself.
 
 ## Design notes
 
