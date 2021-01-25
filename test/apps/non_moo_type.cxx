@@ -1,7 +1,6 @@
 #include "serialization/Serialization.hpp"
 
-namespace myns
-{
+namespace myns {
 
 // A type that's made serializable "intrusively", ie, by changing the type itself
 struct MyTypeIntrusive
@@ -43,80 +42,90 @@ struct MyTypeNonIntrusive
 //
 // For full instructions, see:
 // https://nlohmann.github.io/json/features/arbitrary_types/
-void to_json(nlohmann::json& j, const MyTypeNonIntrusive& m) {
+void
+to_json(nlohmann::json& j, const MyTypeNonIntrusive& m)
+{
   j["i"] = m.i;
   j["s"] = m.s;
   j["v"] = m.v;
 }
 
-void from_json(const nlohmann::json& j, MyTypeNonIntrusive& m) {
+void
+from_json(const nlohmann::json& j, MyTypeNonIntrusive& m)
+{
   j.at("i").get_to(m.i);
   j.at("s").get_to(m.s);
   j.at("v").get_to(m.v);
 }
-
 
 } // end namespace myns
 
 // These two functions provide the serialization/deserialization
 // functionality for MsgPack
 namespace msgpack {
-MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
-namespace adaptor {
- 
-template<>
-struct pack<myns::MyTypeNonIntrusive> {
-    template <typename Stream>
-    packer<Stream>& operator()(msgpack::packer<Stream>& o, myns::MyTypeNonIntrusive const& m) const {
-        // The number here is the number of members in the struct
-        o.pack_array(3);
-        o.pack(m.i);
-        o.pack(m.s);
-        o.pack(m.v);
-        return o;
-    }
-};
-  
-template<>
-struct convert<myns::MyTypeNonIntrusive> {
-  msgpack::object const& operator()(msgpack::object const& o, myns::MyTypeNonIntrusive& m) const {
-        if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
-        // The number here is the number of members in the struct
-        if (o.via.array.size != 3) throw msgpack::type_error();
-        m.i = o.via.array.ptr[0].as<int>();
-        m.s = o.via.array.ptr[1].as<std::string>();
-        m.v = o.via.array.ptr[2].as<std::vector<double>>();
-        return o;
-    }
-};
+MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
+{
+  namespace adaptor {
 
-} // namespace adaptor
+  template<>
+  struct pack<myns::MyTypeNonIntrusive>
+  {
+    template<typename Stream>
+    packer<Stream>& operator()(msgpack::packer<Stream>& o, myns::MyTypeNonIntrusive const& m) const
+    {
+      // The number here is the number of members in the struct
+      o.pack_array(3);
+      o.pack(m.i);
+      o.pack(m.s);
+      o.pack(m.v);
+      return o;
+    }
+  };
+
+  template<>
+  struct convert<myns::MyTypeNonIntrusive>
+  {
+    msgpack::object const& operator()(msgpack::object const& o, myns::MyTypeNonIntrusive& m) const
+    {
+      if (o.type != msgpack::type::ARRAY)
+        throw msgpack::type_error();
+      // The number here is the number of members in the struct
+      if (o.via.array.size != 3)
+        throw msgpack::type_error();
+      m.i = o.via.array.ptr[0].as<int>();
+      m.s = o.via.array.ptr[1].as<std::string>();
+      m.v = o.via.array.ptr[2].as<std::vector<double>>();
+      return o;
+    }
+  };
+
+  } // namespace adaptor
 } // namespace MSGPACK_DEFAULT_API_NS
 } // namespace msgpack
 
-
 template<class T>
-void roundtrip(dunedaq::serialization::SerializationType& stype)
+void
+roundtrip(dunedaq::serialization::SerializationType& stype)
 {
   T m;
-  m.i=3;
-  m.s="foo";
+  m.i = 3;
+  m.s = "foo";
   m.v.push_back(3.1416);
 
-  namespace ser=dunedaq::serialization;
+  namespace ser = dunedaq::serialization;
 
-  std::vector<uint8_t> bytes=ser::serialize(m, ser::MsgPack);
-  T m_recv=ser::deserialize<T>(bytes, ser::MsgPack);
-  assert(m_recv.i==m.i);
-  assert(m_recv.s==m.s);
-  assert(m_recv.v==m.v);
-
+  std::vector<uint8_t> bytes = ser::serialize(m, ser::MsgPack);
+  T m_recv = ser::deserialize<T>(bytes, ser::MsgPack);
+  assert(m_recv.i == m.i);
+  assert(m_recv.s == m.s);
+  assert(m_recv.v == m.v);
 }
 
-int main()
+int
+main()
 {
   // Test all four combinations of { intrusive, non-intrusive } x { msgpack, json }
-  for(auto stype : { dunedaq::serialization::MsgPack, dunedaq::serialization::JSON }){
+  for (auto stype : { dunedaq::serialization::MsgPack, dunedaq::serialization::JSON }) {
     roundtrip<myns::MyTypeIntrusive>(stype);
     roundtrip<myns::MyTypeNonIntrusive>(stype);
   }
