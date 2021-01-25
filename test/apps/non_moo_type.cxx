@@ -114,8 +114,8 @@ roundtrip(dunedaq::serialization::SerializationType& stype)
 
   namespace ser = dunedaq::serialization;
 
-  std::vector<uint8_t> bytes = ser::serialize(m, ser::MsgPack);
-  T m_recv = ser::deserialize<T>(bytes, ser::MsgPack);
+  std::vector<uint8_t> bytes = ser::serialize(m, stype);
+  T m_recv = ser::deserialize<T>(bytes, stype);
   assert(m_recv.i == m.i);
   assert(m_recv.s == m.s);
   assert(m_recv.v == m.v);
