@@ -23,6 +23,7 @@ daq_add_application( network_object_send_receive network_object_send_receive.cxx
 daq_add_application( serialization_speed serialization_speed.cxx TEST LINK_LIBRARIES serialization )
 daq_add_application( serialization_speed_no_ipm serialization_speed_no_ipm.cxx TEST LINK_LIBRARIES serialization)
 daq_add_application( non_moo_type non_moo_type.cxx TEST LINK_LIBRARIES serialization)
+daq_add_application( inheritance inheritance.cxx TEST LINK_LIBRARIES serialization)
 
 ##############################################################################
 
