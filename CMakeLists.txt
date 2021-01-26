@@ -7,14 +7,14 @@ daq_setup_environment()
 find_package(appfwk REQUIRED)
 find_package(ipm REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(msgpack REQUIRED)
 
 ##############################################################################
 # Main library
 
-# We don't have a real library, but we want to create a
-# target for dependents to be able to
-# depend on
-daq_add_library(LINK_LIBRARIES ipm::ipm)
+# We don't have a real library, but we want to create a target for
+# dependents to be able to depend on
+daq_add_library(LINK_LIBRARIES ipm::ipm msgpackc-cxx nlohmann_json::nlohmann_json)
 
 ##############################################################################
 
