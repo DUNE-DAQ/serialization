@@ -16,6 +16,7 @@
 #include "serialization/networkobjectreceiver/Nljs.hpp"
 #include "serialization/networkobjectreceiver/Structs.hpp"
 
+#include <memory> // for shared_ptr
 namespace dunedaq {
 
 /**
@@ -40,11 +41,10 @@ template<class T>
 class NetworkObjectReceiver
 {
 public:
-  NetworkObjectReceiver(const dunedaq::serialization::networkobjectreceiver::Conf& conf)
+  explicit NetworkObjectReceiver(const dunedaq::serialization::networkobjectreceiver::Conf& conf)
     : receiver_(dunedaq::ipm::makeIPMReceiver(conf.ipm_plugin_type))
     , stype_(dunedaq::serialization::fromString(conf.stype))
   {
-    // TODO: We should get a moo.any object from the conf and just pass it straight through
     receiver_->connect_for_receives({ { "connection_string", conf.address } });
   }
 
@@ -58,6 +58,6 @@ protected:
   std::shared_ptr<ipm::Receiver> receiver_;
   serialization::SerializationType stype_;
 };
-}
+} // namespace dunedaq
 
-#endif
+#endif // SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTRECEIVER_HPP_

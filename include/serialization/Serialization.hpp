@@ -14,6 +14,7 @@
 #include <nlohmann/json.hpp>
 
 #include <string>
+#include <vector>
 
 namespace dunedaq {
 
@@ -45,14 +46,14 @@ fromString(const std::string s)
  * @brief Serialize object @p obj using serialization method @p stype
  */
 template<class T>
-std::vector<uint8_t>
+std::vector<uint8_t> // NOLINT
 serialize(const T& obj, SerializationType stype)
 {
   switch (stype) {
     case JSON: {
       nlohmann::json j = obj;
       nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> ret(s.begin(), s.end());
+      std::vector<uint8_t> ret(s.begin(), s.end()); // NOLINT
       return ret;
     }
     case MsgPack: {
@@ -63,7 +64,7 @@ serialize(const T& obj, SerializationType stype)
       // tests aren't any faster than this
       msgpack::sbuffer buf;
       msgpack::pack(buf, obj);
-      std::vector<uint8_t> v(buf.data(), buf.data() + buf.size());
+      std::vector<uint8_t> v(buf.data(), buf.data() + buf.size()); // NOLINT
       return v;
     }
     default:
@@ -86,7 +87,7 @@ deserialize(const std::vector<CharType>& v, SerializationType stype)
       return j.get<T>();
     }
     case MsgPack: {
-      msgpack::object_handle oh = msgpack::unpack((char*)v.data(), v.size());
+      msgpack::object_handle oh = msgpack::unpack((char*)v.data(), v.size()); // NOLINT
       msgpack::object obj = oh.get();
       return obj.as<T>();
     }
@@ -96,6 +97,6 @@ deserialize(const std::vector<CharType>& v, SerializationType stype)
 }
 
 } // namespace serialization
-
 } // namespace dunedaq
-#endif
+
+#endif // SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_

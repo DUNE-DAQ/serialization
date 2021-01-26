@@ -16,6 +16,8 @@
 #include "serialization/networkobjectsender/Nljs.hpp"
 #include "serialization/networkobjectsender/Structs.hpp"
 
+#include <memory> // for shared_ptr
+
 namespace dunedaq {
 
 /**
@@ -42,11 +44,10 @@ template<class T>
 class NetworkObjectSender
 {
 public:
-  NetworkObjectSender(const dunedaq::serialization::networkobjectsender::Conf& conf)
+  explicit NetworkObjectSender(const dunedaq::serialization::networkobjectsender::Conf& conf)
     : sender_(dunedaq::ipm::makeIPMSender(conf.ipm_plugin_type))
     , stype_(dunedaq::serialization::fromString(conf.stype))
   {
-    // TODO: We should get a moo.any object from the conf and just pass it straight through
     sender_->connect_for_sends({ { "connection_string", conf.address } });
   }
 
@@ -63,6 +64,6 @@ protected:
   std::shared_ptr<ipm::Sender> sender_;
   serialization::SerializationType stype_;
 };
-}
+} // namespace dunedaq
 
-#endif
+#endif // SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTSENDER_HPP_
