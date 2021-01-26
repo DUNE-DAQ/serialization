@@ -10,6 +10,7 @@
 #ifndef SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
 #define SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
 
+#include <algorithm>
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
 
@@ -42,6 +43,19 @@ fromString(const std::string s)
   throw std::runtime_error("Unknown serialization type");
 }
 
+constexpr uint8_t
+serializationTypeByte(SerializationType stype)
+{
+  switch (stype) {
+    case JSON:
+      return 'J';
+    case MsgPack:
+      return 'M';
+    default:
+      throw std::runtime_error("Unknown serialization type");
+  }
+}
+
 /**
  * @brief Serialize object @p obj using serialization method @p stype
  */
@@ -53,7 +67,9 @@ serialize(const T& obj, SerializationType stype)
     case JSON: {
       nlohmann::json j = obj;
       nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> ret(s.begin(), s.end()); // NOLINT
+      std::vector<uint8_t> ret(s.size() + 1);
+      ret[0] = serializationTypeByte(stype);
+      std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
       return ret;
     }
     case MsgPack: {
@@ -64,8 +80,10 @@ serialize(const T& obj, SerializationType stype)
       // tests aren't any faster than this
       msgpack::sbuffer buf;
       msgpack::pack(buf, obj);
-      std::vector<uint8_t> v(buf.data(), buf.data() + buf.size()); // NOLINT
-      return v;
+      std::vector<uint8_t> ret(buf.size() + 1);
+      ret[0] = serializationTypeByte(stype);
+      std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
+      return ret;
     }
     default:
       throw std::runtime_error("Unknown serialization type");
@@ -77,17 +95,19 @@ serialize(const T& obj, SerializationType stype)
  */
 template<class T, typename CharType = unsigned char>
 T
-deserialize(const std::vector<CharType>& v, SerializationType stype)
+deserialize(const std::vector<CharType>& v)
 {
   using json = nlohmann::json;
 
-  switch (stype) {
-    case JSON: {
-      json j = json::parse(v);
+  // The first byte in the array indicates the serialization format;
+  // the rest is the actual message
+  switch (v[0]) {
+    case serializationTypeByte(JSON): {
+      json j = json::parse(v.begin() + 1, v.end());
       return j.get<T>();
     }
-    case MsgPack: {
-      msgpack::object_handle oh = msgpack::unpack((char*)v.data(), v.size()); // NOLINT
+    case serializationTypeByte(MsgPack): {
+      msgpack::object_handle oh = msgpack::unpack((char*)(v.data() + 1), v.size() - 1); // NOLINT
       msgpack::object obj = oh.get();
       return obj.as<T>();
     }

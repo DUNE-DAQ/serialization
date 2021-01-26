@@ -38,7 +38,7 @@ time_serialization(dunedaq::serialization::SerializationType stype)
     fd.fake_count = i;
     fd.fakeness = dunedaq::serialization::fsd::Fakeness::SuperFake;
     std::vector<uint8_t> bytes = dunedaq::serialization::serialize(fd, stype);
-    AnotherFakeData fd_recv = dunedaq::serialization::deserialize<AnotherFakeData>(bytes, stype);
+    AnotherFakeData fd_recv = dunedaq::serialization::deserialize<AnotherFakeData>(bytes);
     total += fd_recv.fake_count;
   }
   printf("total: %d\n", total);

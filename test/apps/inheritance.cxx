@@ -98,10 +98,10 @@ main()
 
   std::vector<uint8_t> bytes = ser::serialize(d, ser::MsgPack);
   std::cout << "Receiving to Derived" << std::endl;
-  Derived d_recv = ser::deserialize<Derived>(bytes, ser::MsgPack);
+  Derived d_recv = ser::deserialize<Derived>(bytes);
   assert(d_recv.i == d.i);
   assert(d_recv.s == d.s);
   std::cout << "Receiving to Base" << std::endl;
-  Base b_recv = ser::deserialize<Base>(bytes, ser::MsgPack);
+  Base b_recv = ser::deserialize<Base>(bytes);
   assert(b_recv.i == d.i);
 }

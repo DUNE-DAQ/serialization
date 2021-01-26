@@ -43,7 +43,6 @@ class NetworkObjectReceiver
 public:
   explicit NetworkObjectReceiver(const dunedaq::serialization::networkobjectreceiver::Conf& conf)
     : receiver_(dunedaq::ipm::makeIPMReceiver(conf.ipm_plugin_type))
-    , stype_(dunedaq::serialization::fromString(conf.stype))
   {
     receiver_->connect_for_receives({ { "connection_string", conf.address } });
   }
@@ -51,12 +50,11 @@ public:
   T recv(const dunedaq::ipm::Receiver::duration_type& timeout)
   {
     dunedaq::ipm::Receiver::Response recvd = receiver_->receive(timeout);
-    return serialization::deserialize<T>(recvd.data, stype_);
+    return serialization::deserialize<T>(recvd.data);
   }
 
 protected:
   std::shared_ptr<ipm::Receiver> receiver_;
-  serialization::SerializationType stype_;
 };
 } // namespace dunedaq
 
