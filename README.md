@@ -2,6 +2,8 @@
 
 This repository contains utilities for serializing/deserializing C++ objects for DUNE DAQ. Serialization allows objects to be sent across the network or persisted to disk.
 
+You'll need to edit your `dbt-settings` file to use the `msgpack_c` UPS product. Add `"/cvmfs/dune.opensciencegrid.org/dunedaq/DUNE/products_dev"` to `dune_products_dirs` and `"msgpack_c v3_3_0 e19:prof"` to `dune_products`. See https://github.com/DUNE-DAQ/appfwk/wiki/Compiling-and-running-under-v2.2.0#adding-extra-ups-products-and-product-pools for more information.
+
 ## Quick start
 
 An appropriately-defined C++ type (see below) can be serialized/deserialized as follows:
