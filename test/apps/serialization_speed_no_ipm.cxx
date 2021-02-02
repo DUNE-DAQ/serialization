@@ -52,7 +52,7 @@ int
 main()
 {
   printf("MsgPack:\n");
-  time_serialization(dunedaq::serialization::MsgPack);
+  time_serialization(dunedaq::serialization::kMsgPack);
   printf("JSON:\n");
-  time_serialization(dunedaq::serialization::JSON);
+  time_serialization(dunedaq::serialization::kJSON);
 }
