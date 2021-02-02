@@ -17,6 +17,27 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief Macro to make a class serializable
+ *
+ * Call the macro inside your class declaration, with the first
+ * argument being the class name, followed by each of the member
+ * variables. Example:
+ * 
+ *      struct MyType
+ *      {
+ *        int i;
+ *        std::string s;
+ *        std::vector<double> v;
+ *
+ *        DUNE_DAQ_SERIALIZE(MyType, i, s, v);
+ *      };
+ *
+ */
+#define DUNE_DAQ_SERIALIZE(Type, ...)                \
+  MSGPACK_DEFINE(__VA_ARGS__)                        \
+  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
+
 namespace dunedaq {
 
 namespace serialization {
