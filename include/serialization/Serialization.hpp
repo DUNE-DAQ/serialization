@@ -33,7 +33,7 @@ enum SerializationType
 /**
  * @brief Convert string to SerializationType
  */
-SerializationType
+inline SerializationType
 from_string(const std::string s)
 {
   if (s == "json")
