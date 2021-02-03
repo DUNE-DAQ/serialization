@@ -10,11 +10,11 @@
 #ifndef SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTSENDER_HPP_
 #define SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTSENDER_HPP_
 
-#include "ipm/Sender.hpp"
 #include "serialization/Serialization.hpp"
-
 #include "serialization/networkobjectsender/Nljs.hpp"
 #include "serialization/networkobjectsender/Structs.hpp"
+
+#include "ipm/Sender.hpp"
 
 #include <memory> // for shared_ptr
 
@@ -45,24 +45,24 @@ class NetworkObjectSender
 {
 public:
   explicit NetworkObjectSender(const dunedaq::serialization::networkobjectsender::Conf& conf)
-    : sender_(dunedaq::ipm::makeIPMSender(conf.ipm_plugin_type))
-    , stype_(dunedaq::serialization::fromString(conf.stype))
+    : m_sender(dunedaq::ipm::make_ipm_sender(conf.ipm_plugin_type))
+    , m_stype(dunedaq::serialization::from_string(conf.stype))
   {
-    sender_->connect_for_sends({ { "connection_string", conf.address } });
+    m_sender->connect_for_sends({ { "connection_string", conf.address } });
   }
 
   /**
    * @brief Send object @p obj with timeout @p timeout
    */
-  void send(const T& obj, const dunedaq::ipm::Sender::duration_type& timeout)
+  void send(const T& obj, const dunedaq::ipm::Sender::duration_t& timeout)
   {
-    auto s = serialization::serialize(obj, stype_);
-    sender_->send(s.data(), s.size(), timeout);
+    auto s = serialization::serialize(obj, m_stype);
+    m_sender->send(s.data(), s.size(), timeout);
   }
 
 protected:
-  std::shared_ptr<ipm::Sender> sender_;
-  serialization::SerializationType stype_;
+  std::shared_ptr<ipm::Sender> m_sender;
+  serialization::SerializationType m_stype;
 };
 } // namespace dunedaq
 

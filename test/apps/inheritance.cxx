@@ -1,5 +1,6 @@
-#include "msgpack/adaptor/define_decl.hpp"
 #include "serialization/Serialization.hpp"
+
+#include "msgpack/adaptor/define_decl.hpp"
 
 #include <iostream>
 
@@ -96,7 +97,7 @@ main()
 
   namespace ser = dunedaq::serialization;
 
-  std::vector<uint8_t> bytes = ser::serialize(d, ser::MsgPack);
+  std::vector<uint8_t> bytes = ser::serialize(d, ser::kMsgPack);
   std::cout << "Receiving to Derived" << std::endl;
   Derived d_recv = ser::deserialize<Derived>(bytes);
   assert(d_recv.i == d.i);

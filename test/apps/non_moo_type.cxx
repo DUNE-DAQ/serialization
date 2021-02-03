@@ -5,9 +5,9 @@ namespace myns {
 // A type that's made serializable "intrusively", ie, by changing the type itself
 struct MyTypeIntrusive
 {
-  int i;
-  std::string s;
-  std::vector<double> v;
+  int count;
+  std::string name;
+  std::vector<double> values;
 
   // These are the macros that make the type serializable by MsgPack
   // and nlohmann::json respectively. Both are needed in order to use
@@ -18,8 +18,8 @@ struct MyTypeIntrusive
   //
   // * The NLOHMANN macro requires the class name as its first
   //   argument, while MSGPACK_DEFINE does not
-  MSGPACK_DEFINE(i, s, v)
-  NLOHMANN_DEFINE_TYPE_INTRUSIVE(MyTypeIntrusive, i, s, v);
+  MSGPACK_DEFINE(count, name, values)
+  NLOHMANN_DEFINE_TYPE_INTRUSIVE(MyTypeIntrusive, count, name, values);
 };
 
 // A type that's made serializable non-intrusively, ie without
@@ -29,9 +29,9 @@ struct MyTypeIntrusive
 // are just masochistic
 struct MyTypeNonIntrusive
 {
-  int i;
-  std::string s;
-  std::vector<double> v;
+  int count;
+  std::string name;
+  std::vector<double> values;
 };
 
 // These two functions provide the serialization/deserialization
@@ -45,17 +45,17 @@ struct MyTypeNonIntrusive
 void
 to_json(nlohmann::json& j, const MyTypeNonIntrusive& m)
 {
-  j["i"] = m.i;
-  j["s"] = m.s;
-  j["v"] = m.v;
+  j["count"]  = m.count;
+  j["name"]   = m.name;
+  j["values"] = m.values;
 }
 
 void
 from_json(const nlohmann::json& j, MyTypeNonIntrusive& m)
 {
-  j.at("i").get_to(m.i);
-  j.at("s").get_to(m.s);
-  j.at("v").get_to(m.v);
+  j.at("count").get_to(m.count);
+  j.at("name").get_to(m.name);
+  j.at("values").get_to(m.values);
 }
 
 } // end namespace myns
@@ -75,9 +75,9 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
     {
       // The number here is the number of members in the struct
       o.pack_array(3);
-      o.pack(m.i);
-      o.pack(m.s);
-      o.pack(m.v);
+      o.pack(m.count);
+      o.pack(m.name);
+      o.pack(m.values);
       return o;
     }
   };
@@ -92,9 +92,9 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
       // The number here is the number of members in the struct
       if (o.via.array.size != 3)
         throw msgpack::type_error();
-      m.i = o.via.array.ptr[0].as<int>();
-      m.s = o.via.array.ptr[1].as<std::string>();
-      m.v = o.via.array.ptr[2].as<std::vector<double>>();
+      m.count = o.via.array.ptr[0].as<int>();
+      m.name = o.via.array.ptr[1].as<std::string>();
+      m.values = o.via.array.ptr[2].as<std::vector<double>>();
       return o;
     }
   };
@@ -108,24 +108,24 @@ void
 roundtrip(dunedaq::serialization::SerializationType& stype)
 {
   T m;
-  m.i = 3;
-  m.s = "foo";
-  m.v.push_back(3.1416);
+  m.count = 3;
+  m.name = "foo";
+  m.values.push_back(3.1416);
 
   namespace ser = dunedaq::serialization;
 
   std::vector<uint8_t> bytes = ser::serialize(m, stype);
   T m_recv = ser::deserialize<T>(bytes);
-  assert(m_recv.i == m.i);
-  assert(m_recv.s == m.s);
-  assert(m_recv.v == m.v);
+  assert(m_recv.count  == m.count);
+  assert(m_recv.name   == m.name);
+  assert(m_recv.values == m.values);
 }
 
 int
 main()
 {
   // Test all four combinations of { intrusive, non-intrusive } x { msgpack, json }
-  for (auto stype : { dunedaq::serialization::MsgPack, dunedaq::serialization::JSON }) {
+  for (auto stype : { dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }) {
     roundtrip<myns::MyTypeIntrusive>(stype);
     roundtrip<myns::MyTypeNonIntrusive>(stype);
   }

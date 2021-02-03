@@ -10,11 +10,11 @@
 #ifndef SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTRECEIVER_HPP_
 #define SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTRECEIVER_HPP_
 
-#include "ipm/Receiver.hpp"
 #include "serialization/Serialization.hpp"
-
 #include "serialization/networkobjectreceiver/Nljs.hpp"
 #include "serialization/networkobjectreceiver/Structs.hpp"
+
+#include "ipm/Receiver.hpp"
 
 #include <memory> // for shared_ptr
 namespace dunedaq {
@@ -42,19 +42,19 @@ class NetworkObjectReceiver
 {
 public:
   explicit NetworkObjectReceiver(const dunedaq::serialization::networkobjectreceiver::Conf& conf)
-    : receiver_(dunedaq::ipm::makeIPMReceiver(conf.ipm_plugin_type))
+    : m_receiver(dunedaq::ipm::make_ipm_receiver(conf.ipm_plugin_type))
   {
-    receiver_->connect_for_receives({ { "connection_string", conf.address } });
+    m_receiver->connect_for_receives({ { "connection_string", conf.address } });
   }
 
-  T recv(const dunedaq::ipm::Receiver::duration_type& timeout)
+  T recv(const dunedaq::ipm::Receiver::duration_t& timeout)
   {
-    dunedaq::ipm::Receiver::Response recvd = receiver_->receive(timeout);
-    return serialization::deserialize<T>(recvd.data);
+    dunedaq::ipm::Receiver::Response recvd = m_receiver->receive(timeout);
+    return serialization::deserialize<T>(recvd.m_data);
   }
 
 protected:
-  std::shared_ptr<ipm::Receiver> receiver_;
+  std::shared_ptr<ipm::Receiver> m_receiver;
 };
 } // namespace dunedaq
 
