@@ -9,17 +9,7 @@ struct MyTypeIntrusive
   std::string name;
   std::vector<double> values;
 
-  // These are the macros that make the type serializable by MsgPack
-  // and nlohmann::json respectively. Both are needed in order to use
-  // the functions in `dunedaq::serialization`. There are some quirks:
-  //
-  // * MSGPACK_DEFINE should _not_ be followed by a `;`, in order to
-  //   avoid a warning
-  //
-  // * The NLOHMANN macro requires the class name as its first
-  //   argument, while MSGPACK_DEFINE does not
-  MSGPACK_DEFINE(count, name, values)
-  NLOHMANN_DEFINE_TYPE_INTRUSIVE(MyTypeIntrusive, count, name, values);
+  DUNE_DAQ_SERIALIZE(MyTypeIntrusive, count, name, values);
 };
 
 // A type that's made serializable non-intrusively, ie without

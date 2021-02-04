@@ -16,17 +16,11 @@ namespace dunedaq::serialization::networkobjectreceiver {
     // @brief Address to receive from
     using Address = std::string;
 
-    // @brief String describing serialization type
-    using SerializationString = std::string;
-
     // @brief IPM plugin type
     using IPMPluginType = std::string;
 
     // @brief NetworkObjectReceiver Configuration
     struct Conf {
-
-        // @brief Serialization type
-        SerializationString stype = "json";
 
         // @brief IPM plugin type
         IPMPluginType ipm_plugin_type = "ZmqSender";
