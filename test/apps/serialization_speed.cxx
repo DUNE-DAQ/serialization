@@ -60,7 +60,6 @@ main()
 
   dunedaq::serialization::networkobjectreceiver::Conf receiver_conf;
   receiver_conf.ipm_plugin_type = "ZmqReceiver";
-  receiver_conf.stype = "msgpack";
   receiver_conf.address = "inproc://foo";
 
   const int N = 1000000;

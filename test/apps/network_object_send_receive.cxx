@@ -21,7 +21,6 @@ main()
 
   dunedaq::serialization::networkobjectreceiver::Conf receiver_conf;
   receiver_conf.ipm_plugin_type = "ZmqReceiver";
-  receiver_conf.stype = "json";
   receiver_conf.address = "inproc://foo";
 
   dunedaq::NetworkObjectSender<FakeData> sender(sender_conf);
