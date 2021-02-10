@@ -56,8 +56,7 @@ public:
    */
   void send(const T& obj, const dunedaq::ipm::Sender::duration_t& timeout)
   {
-    auto s = serialization::serialize(obj, m_stype);
-    m_sender->send(s.data(), s.size(), timeout);
+    serialization::serialize_and_send(obj, m_stype, m_sender, timeout);
   }
 
 protected:
