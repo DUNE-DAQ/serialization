@@ -27,4 +27,8 @@ daq_add_application( inheritance inheritance.cxx TEST LINK_LIBRARIES serializati
 
 ##############################################################################
 
+# Unit tests
+
+daq_add_unit_test(Serialization_test  LINK_LIBRARIES serialization)
+
 daq_install()
