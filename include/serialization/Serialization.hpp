@@ -11,6 +11,7 @@
 #define SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
 
 #include "ipm/Sender.hpp"
+#include "ers/ers.h"
 
 #include "msgpack.hpp"
 #include "nlohmann/json.hpp"
@@ -25,7 +26,7 @@
  * Call the macro inside your class declaration, with the first
  * argument being the class name, followed by each of the member
  * variables. Example:
- * 
+ *
  *      struct MyType
  *      {
  *        int i;
@@ -41,6 +42,29 @@
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
 
 namespace dunedaq {
+
+// clang-format off
+ERS_DECLARE_ISSUE(serialization,                        // namespace
+                  UnknownSerializationTypeString,       // issue name
+                  "Unknown serialization type " << t,   // message
+                  ((std::string)t))                     // attributes
+
+ERS_DECLARE_ISSUE(serialization,                        // namespace
+                  UnknownSerializationTypeEnum,         // issue name
+                  "Unknown serialization type",)        // message
+
+ERS_DECLARE_ISSUE(serialization,                        // namespace
+                  UnknownSerializationTypeByte,         // issue name
+                  "Unknown serialization type " << t,   // message
+                  ((char)t))                            // attributes
+
+ERS_DECLARE_ISSUE(serialization,                        // namespace
+                  CannotDeserializeMessage,             // issue name
+                  "Cannot deserialize message",)        // message
+
+
+
+// clang-format on
 
 namespace serialization {
 
@@ -63,7 +87,7 @@ from_string(const std::string s)
     return kJSON;
   if (s == "msgpack")
     return kMsgPack;
-  throw std::runtime_error("Unknown serialization type");
+  throw UnknownSerializationTypeString(ERS_HERE, s);
 }
 
 constexpr uint8_t
@@ -75,7 +99,7 @@ serialization_type_byte(SerializationType stype)
     case kMsgPack:
       return 'M';
     default:
-      throw std::runtime_error("Unknown serialization type");
+      throw UnknownSerializationTypeEnum(ERS_HERE);
   }
 }
 
@@ -109,14 +133,19 @@ serialize(const T& obj, SerializationType stype)
       return ret;
     }
     default:
-      throw std::runtime_error("Unknown serialization type");
+      throw UnknownSerializationTypeEnum(ERS_HERE);
   }
 }
 
 /**
- * @brief Serialize object @p obj using serialization method @p stype, and send the resulting object using the IPM Sender @p sender with send timeout @p timeout
+ * @brief Serialize object @p obj using serialization method @p stype,
+ * and send the resulting object using the IPM Sender @p sender with
+ * send timeout @p timeout
  *
- * In the (common) case where you are serializing an object in order to send it over an IPM connection, this function requires one less data copy than @a serialize. For large objects like Fragment, this can be worth a factor of 2 in speed
+ * In the (common) case where you are serializing an object in order
+ * to send it over an IPM connection, this function requires one less
+ * data copy than @a serialize. For large objects like Fragment, this
+ * can be worth a factor of 2 in speed
  */
 template<class T>
 void
@@ -142,7 +171,7 @@ serialize_and_send(const T& obj, SerializationType stype,
       return;
     }
     default:
-      throw std::runtime_error("Unknown serialization type");
+      throw UnknownSerializationTypeEnum(ERS_HERE);
   }
 }
 
@@ -159,29 +188,40 @@ deserialize(const std::vector<CharType>& v)
   // the rest is the actual message
   switch (v[0]) {
     case serialization_type_byte(kJSON): {
-      json j = json::parse(v.begin() + 1, v.end());
-      return j.get<T>();
+      try{
+        json j = json::parse(v.begin() + 1, v.end());
+        return j.get<T>();
+      } catch(json::exception& e) {
+        throw CannotDeserializeMessage(ERS_HERE, e);
+      }
     }
     case serialization_type_byte(kMsgPack): {
-      // The lambda function here is of type `unpack_reference_func`
-      // as described at
-      // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
-      // . It is called for every STR, BIN and EXT field in the
-      // MsgPack data. If the function returns false, the object is
-      // copied into MsgPack's "zone", otherwise a pointer to the
-      // original buffer is stored. Our input buffer is going to exist
-      // at least until the end of this function, so it's safe to
-      // return true (ie, store a pointer in the MsgPack object; no
-      // copy) everywhere. Doing so results in a factor ~2 speedup in
-      // deserializing Fragment, which is just a large BIN field
-      msgpack::object_handle oh = msgpack::unpack((char*)(v.data() + 1),
-                                                  v.size() - 1,
-                                                  [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool {return true;}); // NOLINT
-      msgpack::object obj = oh.get();
-      return obj.as<T>();
+      try{
+        // The lambda function here is of type `unpack_reference_func`
+        // as described at
+        // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
+        // . It is called for every STR, BIN and EXT field in the
+        // MsgPack data. If the function returns false, the object is
+        // copied into MsgPack's "zone", otherwise a pointer to the
+        // original buffer is stored. Our input buffer is going to exist
+        // at least until the end of this function, so it's safe to
+        // return true (ie, store a pointer in the MsgPack object; no
+        // copy) everywhere. Doing so results in a factor ~2 speedup in
+        // deserializing Fragment, which is just a large BIN field
+        msgpack::object_handle oh = msgpack::unpack((char*)(v.data() + 1),
+                                                    v.size() - 1,
+                                                    [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool {return true;}); // NOLINT
+        msgpack::object obj = oh.get();
+        return obj.as<T>();
+      } catch(msgpack::type_error& e) {
+        throw CannotDeserializeMessage(ERS_HERE, e);
+      } catch(msgpack::unpack_error& e){
+        throw CannotDeserializeMessage(ERS_HERE, e);
+      }
+
     }
     default:
-      throw std::runtime_error("Unknown serialization type");
+      throw UnknownSerializationTypeByte(ERS_HERE, (char)v[0]); // NOLINT
   }
 }
 
