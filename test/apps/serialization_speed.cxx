@@ -19,7 +19,7 @@ using FakeData = dunedaq::serialization::fsd::FakeData;
 void
 sender_thread_fn(dunedaq::serialization::networkobjectsender::Conf sender_conf, int n_messages)
 {
-  dunedaq::NetworkObjectSender<FakeData> sender(sender_conf);
+  dunedaq::serialization::NetworkObjectSender<FakeData> sender(sender_conf);
 
   for (int i = 0; i < n_messages; ++i) {
     FakeData fd;
@@ -33,7 +33,7 @@ void
 receiver_thread_fn(dunedaq::serialization::networkobjectreceiver::Conf receiver_conf, int n_messages)
 {
   int total = 0;
-  dunedaq::NetworkObjectReceiver<FakeData> receiver(receiver_conf);
+  dunedaq::serialization::NetworkObjectReceiver<FakeData> receiver(receiver_conf);
   for (int i = 0; i < n_messages; ++i) {
     FakeData fd_recv = receiver.recv(std::chrono::milliseconds(1000000));
     total += fd_recv.fake_count;

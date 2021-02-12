@@ -23,8 +23,8 @@ main()
   receiver_conf.ipm_plugin_type = "ZmqReceiver";
   receiver_conf.address = "inproc://foo";
 
-  dunedaq::NetworkObjectSender<FakeData> sender(sender_conf);
-  dunedaq::NetworkObjectReceiver<FakeData> receiver(receiver_conf);
+  dunedaq::serialization::NetworkObjectSender<FakeData> sender(sender_conf);
+  dunedaq::serialization::NetworkObjectReceiver<FakeData> receiver(receiver_conf);
 
   FakeData fd;
   fd.fake_count = 25;

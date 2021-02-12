@@ -18,7 +18,7 @@
 
 #include <memory> // for shared_ptr
 
-namespace dunedaq {
+namespace dunedaq::serialization {
 
 /**
  * @brief NetworkObjectSender sends objects over IPM connections
@@ -63,6 +63,6 @@ protected:
   std::shared_ptr<ipm::Sender> m_sender;
   serialization::SerializationType m_stype;
 };
-} // namespace dunedaq
+} // namespace dunedaq::serialization
 
 #endif // SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTSENDER_HPP_

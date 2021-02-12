@@ -17,7 +17,7 @@
 #include "ipm/Receiver.hpp"
 
 #include <memory> // for shared_ptr
-namespace dunedaq {
+namespace dunedaq::serialization {
 
 /**
  * @brief NetworkObjectReceiver receives objects over IPM connections
@@ -56,6 +56,6 @@ public:
 protected:
   std::shared_ptr<ipm::Receiver> m_receiver;
 };
-} // namespace dunedaq
+} // namespace dunedaq::serialization
 
 #endif // SERIALIZATION_INCLUDE_SERIALIZATION_NETWORKOBJECTRECEIVER_HPP_

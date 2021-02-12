@@ -76,8 +76,8 @@ BOOST_DATA_TEST_CASE(NetworkObjectSenderReceiver, boost::unit_test::data::make({
   receiver_conf.ipm_plugin_type = "ZmqReceiver";
   receiver_conf.address = "inproc://foo";
 
-  dunedaq::NetworkObjectSender<MyTypeIntrusive> sender(sender_conf);
-  dunedaq::NetworkObjectReceiver<MyTypeIntrusive> receiver(receiver_conf);
+  dunedaq::serialization::NetworkObjectSender<MyTypeIntrusive> sender(sender_conf);
+  dunedaq::serialization::NetworkObjectReceiver<MyTypeIntrusive> receiver(receiver_conf);
 
   MyTypeIntrusive m;
   m.count = 3;
