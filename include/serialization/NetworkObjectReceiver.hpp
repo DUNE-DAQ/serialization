@@ -50,7 +50,7 @@ public:
   T recv(const dunedaq::ipm::Receiver::duration_t& timeout)
   {
     dunedaq::ipm::Receiver::Response recvd = m_receiver->receive(timeout);
-    return serialization::deserialize<T>(recvd.m_data);
+    return serialization::deserialize<T>(recvd.data);
   }
 
 protected:
