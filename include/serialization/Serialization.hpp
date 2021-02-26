@@ -11,7 +11,7 @@
 #define SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
 
 #include "ipm/Sender.hpp"
-#include "ers/ers.h"
+#include "ers/Issue.hpp"
 
 #include "msgpack.hpp"
 #include "nlohmann/json.hpp"
