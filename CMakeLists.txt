@@ -10,6 +10,13 @@ find_package(nlohmann_json REQUIRED)
 find_package(msgpack REQUIRED)
 
 ##############################################################################
+# Schema
+
+daq_codegen(fsd.jsonnet TEST TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
+daq_codegen(NetworkObjectSender.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
+daq_codegen(NetworkObjectReceiver.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
+
+##############################################################################
 # Main library
 
 # We don't have a real library, but we want to create a target for
