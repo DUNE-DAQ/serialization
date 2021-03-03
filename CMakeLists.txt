@@ -13,8 +13,8 @@ find_package(msgpack REQUIRED)
 # Schema
 
 daq_codegen(fsd.jsonnet TEST TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
-daq_codegen(NetworkObjectSender.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
-daq_codegen(NetworkObjectReceiver.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
+daq_codegen(networkobjectsender.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
+daq_codegen(networkobjectreceiver.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
 
 ##############################################################################
 # Main library
