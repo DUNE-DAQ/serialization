@@ -7,9 +7,6 @@
  */
 
 #include "serialization/Serialization.hpp"
-#include "serialization/NetworkObjectSender.hpp"
-#include "serialization/NetworkObjectReceiver.hpp"
-
 
 /**
  * @brief Name of this test module
@@ -56,42 +53,6 @@ BOOST_DATA_TEST_CASE(SerializationRoundTrip, boost::unit_test::data::make({duned
   BOOST_CHECK_EQUAL(m_recv.name,   m.name);
   BOOST_CHECK_EQUAL_COLLECTIONS(m_recv.values.begin(), m_recv.values.end(),
                                 m.values.begin(), m.values.end());
-
-}
-
-BOOST_DATA_TEST_CASE(NetworkObjectSenderReceiver, boost::unit_test::data::make({"json", "msgpack"}))
-{
-  // This function is run in a loop with the two serialization
-  // types. Sometimes we get back to the top of the loop before the
-  // inproc connection is closed, and we get an "address already in
-  // use" error. Hack around that by just sleeping here
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-  dunedaq::serialization::networkobjectsender::Conf sender_conf;
-  sender_conf.ipm_plugin_type = "ZmqSender";
-  sender_conf.stype = sample;
-  sender_conf.address = "inproc://foo";
-
-  dunedaq::serialization::networkobjectreceiver::Conf receiver_conf;
-  receiver_conf.ipm_plugin_type = "ZmqReceiver";
-  receiver_conf.address = "inproc://foo";
-
-  dunedaq::serialization::NetworkObjectSender<MyTypeIntrusive> sender(sender_conf);
-  dunedaq::serialization::NetworkObjectReceiver<MyTypeIntrusive> receiver(receiver_conf);
-
-  MyTypeIntrusive m;
-  m.count = 3;
-  m.name = "foo";
-  m.values.push_back(3.1416);
-  m.values.push_back(2.781);
-
-  sender.send(m, std::chrono::milliseconds(2));
-  MyTypeIntrusive m_recv = receiver.recv(std::chrono::milliseconds(2));
-
-  BOOST_CHECK_EQUAL(m_recv.count,  m.count);
-  BOOST_CHECK_EQUAL(m_recv.name,   m.name);
-  BOOST_CHECK_EQUAL_COLLECTIONS(m_recv.values.begin(), m_recv.values.end(),
-                                m.values.begin(),      m.values.end());
 
 }
 

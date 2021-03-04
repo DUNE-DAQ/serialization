@@ -10,7 +10,6 @@
 #ifndef SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
 #define SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
 
-#include "ipm/Sender.hpp"
 #include "ers/Issue.hpp"
 
 #include "msgpack.hpp"
@@ -131,44 +130,6 @@ serialize(const T& obj, SerializationType stype)
       ret[0] = serialization_type_byte(stype);
       std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
       return ret;
-    }
-    default:
-      throw UnknownSerializationTypeEnum(ERS_HERE);
-  }
-}
-
-/**
- * @brief Serialize object @p obj using serialization method @p stype,
- * and send the resulting object using the IPM Sender @p sender with
- * send timeout @p timeout
- *
- * In the (common) case where you are serializing an object in order
- * to send it over an IPM connection, this function requires one less
- * data copy than @a serialize. For large objects like Fragment, this
- * can be worth a factor of 2 in speed
- */
-template<class T>
-void
-serialize_and_send(const T& obj, SerializationType stype,
-                   std::shared_ptr<dunedaq::ipm::Sender> sender, dunedaq::ipm::Sender::duration_t timeout)
-{
-  switch (stype) {
-    case kJSON: {
-      nlohmann::json j = obj;
-      nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> vec(s.size()+1);
-      vec[0]=serialization_type_byte(stype);
-      std::copy(s.begin(), s.end(), vec.data() + 1); // NOLINT
-      sender->send(vec.data(), vec.size(), timeout);
-      return;
-    }
-    case kMsgPack: {
-      msgpack::sbuffer buf;
-      char tmp(serialization_type_byte(stype));
-      buf.write(&tmp, 1);
-      msgpack::pack(buf, obj);
-      sender->send(buf.data(), buf.size(), timeout);
-      return;
     }
     default:
       throw UnknownSerializationTypeEnum(ERS_HERE);
