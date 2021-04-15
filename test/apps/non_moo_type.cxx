@@ -35,8 +35,8 @@ struct MyTypeNonIntrusive
 void
 to_json(nlohmann::json& j, const MyTypeNonIntrusive& m)
 {
-  j["count"]  = m.count;
-  j["name"]   = m.name;
+  j["count"] = m.count;
+  j["name"] = m.name;
   j["values"] = m.values;
 }
 
@@ -149,7 +149,6 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 } // namespace MSGPACK_DEFAULT_API_NS
 } // namespace msgpack
 
-
 template<class T>
 void
 roundtrip(dunedaq::serialization::SerializationType& stype)
@@ -162,13 +161,14 @@ roundtrip(dunedaq::serialization::SerializationType& stype)
   namespace ser = dunedaq::serialization;
 
   std::vector<uint8_t> bytes = ser::serialize(m, stype);
-  if(stype== dunedaq::serialization::kJSON){
-    for(auto byte: bytes) std::cout << byte;
+  if (stype == dunedaq::serialization::kJSON) {
+    for (auto byte : bytes)
+      std::cout << byte;
     std::cout << std::endl;
   }
   T m_recv = ser::deserialize<T>(bytes);
-  assert(m_recv.count  == m.count);
-  assert(m_recv.name   == m.name);
+  assert(m_recv.count == m.count);
+  assert(m_recv.name == m.name);
   assert(m_recv.values == m.values);
 }
 

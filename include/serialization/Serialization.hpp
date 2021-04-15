@@ -17,8 +17,8 @@
 
 #include <algorithm>
 #include <string>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 /**
  * @brief Macro to make a class serializable
@@ -37,8 +37,8 @@
  *      };
  *
  */
-#define DUNE_DAQ_SERIALIZE(Type, ...)                \
-  MSGPACK_DEFINE(__VA_ARGS__)                        \
+#define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
+  MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
 
 namespace dunedaq {
@@ -61,8 +61,6 @@ ERS_DECLARE_ISSUE(serialization,                        // namespace
 ERS_DECLARE_ISSUE(serialization,                        // namespace
                   CannotDeserializeMessage,             // issue name
                   "Cannot deserialize message",)        // message
-
-
 
 // clang-format on
 
@@ -108,8 +106,7 @@ serialization_type_byte(SerializationType stype)
 // appropriate to_json function. (In that case, the user should have
 // also written a corresponding from_json function, but the template
 // matching doesn't check that.)
-template<class T,
-         std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
+template<class T, std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
 std::vector<uint8_t> // NOLINT
 serialize_impl_json(const T& obj)
 {
@@ -141,22 +138,21 @@ serialize_impl_json(const T& obj)
 //      std::string y;
 //    };
 //
-// `MyClass m{1, "foo"};` serialized via DUNE_DAQ_SERIALIZE would result in  
+// `MyClass m{1, "foo"};` serialized via DUNE_DAQ_SERIALIZE would result in
 //
 // { "x": 1, "y": "foo" }
 //
 // whereas this function would most likely serialize it as
 //
 // [ 1, "foo" ]
-template<class T,
-         std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
+template<class T, std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
 std::vector<uint8_t> // NOLINT
 serialize_impl_json(const T& obj)
 {
   msgpack::sbuffer buf;
   msgpack::pack(buf, obj);
-  std::vector<uint8_t> v(buf.data(), buf.data()+buf.size());
-  nlohmann::json  j=nlohmann::json::from_msgpack(v);
+  std::vector<uint8_t> v(buf.data(), buf.data() + buf.size());
+  nlohmann::json j = nlohmann::json::from_msgpack(v);
 
   nlohmann::json::string_t s = j.dump();
   std::vector<uint8_t> ret(s.size() + 1);
@@ -201,37 +197,33 @@ serialize(const T& obj, SerializationType stype)
   }
 }
 
-
-template<class T,
-         std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
+template<class T, std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
 T
 deserialize_impl_json(const nlohmann::json& j)
 {
   using json = nlohmann::json;
-  try{
+  try {
     return j.get<T>();
-  } catch(json::exception& e) {
+  } catch (json::exception& e) {
     throw CannotDeserializeMessage(ERS_HERE, e);
   }
 }
 
-template<class T,
-         std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
+template<class T, std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
 T
 deserialize_impl_json(const nlohmann::json& j)
 {
   using json = nlohmann::json;
-  try{
+  try {
     std::vector<uint8_t> v = json::to_msgpack(j);
-    msgpack::object_handle oh = msgpack::unpack((char*)(v.data()),
-                                                v.size());
+    msgpack::object_handle oh = msgpack::unpack((char*)(v.data()), v.size());
     msgpack::object obj = oh.get();
     return obj.as<T>();
-  } catch(json::exception& e) {
+  } catch (json::exception& e) {
     throw CannotDeserializeMessage(ERS_HERE, e);
-  } catch(msgpack::type_error& e) {
+  } catch (msgpack::type_error& e) {
     throw CannotDeserializeMessage(ERS_HERE, e);
-  } catch(msgpack::unpack_error& e){
+  } catch (msgpack::unpack_error& e) {
     throw CannotDeserializeMessage(ERS_HERE, e);
   }
 }
@@ -249,15 +241,15 @@ deserialize(const std::vector<CharType>& v)
   // the rest is the actual message
   switch (v[0]) {
     case serialization_type_byte(kJSON): {
-      try{
+      try {
         json j = json::parse(v.begin() + 1, v.end());
         return deserialize_impl_json<T>(j);
-      } catch(json::exception& e) {
+      } catch (json::exception& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
       }
     }
     case serialization_type_byte(kMsgPack): {
-      try{
+      try {
         // The lambda function here is of type `unpack_reference_func`
         // as described at
         // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
@@ -269,17 +261,19 @@ deserialize(const std::vector<CharType>& v)
         // return true (ie, store a pointer in the MsgPack object; no
         // copy) everywhere. Doing so results in a factor ~2 speedup in
         // deserializing Fragment, which is just a large BIN field
-        msgpack::object_handle oh = msgpack::unpack((char*)(v.data() + 1),
-                                                    v.size() - 1,
-                                                    [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool {return true;}); // NOLINT
+        msgpack::object_handle oh =
+          msgpack::unpack((char*)(v.data() + 1),
+                          v.size() - 1,
+                          [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void * /*user_data*/) -> bool {
+                            return true;
+                          }); // NOLINT
         msgpack::object obj = oh.get();
         return obj.as<T>();
-      } catch(msgpack::type_error& e) {
+      } catch (msgpack::type_error& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
-      } catch(msgpack::unpack_error& e){
+      } catch (msgpack::unpack_error& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
       }
-
     }
     default:
       throw UnknownSerializationTypeByte(ERS_HERE, (char)v[0]); // NOLINT
