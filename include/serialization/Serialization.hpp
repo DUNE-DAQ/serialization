@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 /**
  * @brief Macro to make a class serializable
@@ -39,6 +40,33 @@
 #define DUNE_DAQ_SERIALIZE(Type, ...)                \
   MSGPACK_DEFINE(__VA_ARGS__)                        \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
+
+// template<class T>
+// class dummy
+// {
+// public:
+//   T contained;
+// };
+
+// namespace nlohmann {
+// template <typename T>
+// struct adl_serializer<dummy<T>> {
+//   static void to_json(json& j, const dummy<T>& obj) {
+//     // Convert T to msgpack, then use json::from_msgpack
+//     msgpack::sbuffer buf;
+//     msgpack::pack(buf, obj.contained);
+//     j=json::from_msgpack(buf);
+//   }
+
+//   static void from_json(const json& j, dummy<T>& obj) {
+//     std::vector<uint8_t> v = json::to_msgpack(j);
+//     msgpack::object_handle oh = msgpack::unpack((char*)(v.data()),
+//                                                 v.size());
+//     msgpack::object mobj = oh.get();
+//     obj=mobj.as<dummy<T>>();
+//   }
+// };
+// }
 
 namespace dunedaq {
 
@@ -102,6 +130,53 @@ serialization_type_byte(SerializationType stype)
   }
 }
 
+template<class T,
+         std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
+std::vector<uint8_t> // NOLINT
+serialize_impl_json(const T& obj)
+{
+  nlohmann::json j = obj;
+  nlohmann::json::string_t s = j.dump();
+  std::vector<uint8_t> ret(s.size() + 1);
+  ret[0] = serialization_type_byte(kJSON);
+  std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
+  return ret;
+}
+
+template<class T,
+         std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
+std::vector<uint8_t> // NOLINT
+serialize_impl_json(const T& obj)
+{
+  msgpack::sbuffer buf;
+  msgpack::pack(buf, obj);
+  std::vector<uint8_t> v(buf.data(), buf.data()+buf.size());
+  nlohmann::json  j=nlohmann::json::from_msgpack(v);
+
+  nlohmann::json::string_t s = j.dump();
+  std::vector<uint8_t> ret(s.size() + 1);
+  ret[0] = serialization_type_byte(kJSON);
+  std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
+  return ret;
+}
+
+template<class T>
+std::vector<uint8_t> // NOLINT
+serialize_impl_msgpack(const T& obj)
+{
+  // Serialize into the sbuffer and then copy to a
+  // std::vector. Seems like it would be more efficient to
+  // write directly to the vector (by creating a class that
+  // implements `void write(char* buf, size_t len)`), but my
+  // tests aren't any faster than this
+  msgpack::sbuffer buf;
+  msgpack::pack(buf, obj);
+  std::vector<uint8_t> ret(buf.size() + 1);
+  ret[0] = serialization_type_byte(kMsgPack);
+  std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
+  return ret;
+}
+
 /**
  * @brief Serialize object @p obj using serialization method @p stype
  */
@@ -111,28 +186,48 @@ serialize(const T& obj, SerializationType stype)
 {
   switch (stype) {
     case kJSON: {
-      nlohmann::json j = obj;
-      nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> ret(s.size() + 1);
-      ret[0] = serialization_type_byte(stype);
-      std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
-      return ret;
+      return serialize_impl_json(obj);
     }
     case kMsgPack: {
-      // Serialize into the sbuffer and then copy to a
-      // std::vector. Seems like it would be more efficient to
-      // write directly to the vector (by creating a class that
-      // implements `void write(char* buf, size_t len)`), but my
-      // tests aren't any faster than this
-      msgpack::sbuffer buf;
-      msgpack::pack(buf, obj);
-      std::vector<uint8_t> ret(buf.size() + 1);
-      ret[0] = serialization_type_byte(stype);
-      std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
-      return ret;
+      return serialize_impl_msgpack(obj);
     }
     default:
       throw UnknownSerializationTypeEnum(ERS_HERE);
+  }
+}
+
+
+template<class T,
+         std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
+T
+deserialize_impl_json(const nlohmann::json& j)
+{
+  using json = nlohmann::json;
+  try{
+    return j.get<T>();
+  } catch(json::exception& e) {
+    throw CannotDeserializeMessage(ERS_HERE, e);
+  }
+}
+
+template<class T,
+         std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
+T
+deserialize_impl_json(const nlohmann::json& j)
+{
+  using json = nlohmann::json;
+  try{
+    std::vector<uint8_t> v = json::to_msgpack(j);
+    msgpack::object_handle oh = msgpack::unpack((char*)(v.data()),
+                                                v.size());
+    msgpack::object obj = oh.get();
+    return obj.as<T>();
+  } catch(json::exception& e) {
+    throw CannotDeserializeMessage(ERS_HERE, e);
+  } catch(msgpack::type_error& e) {
+    throw CannotDeserializeMessage(ERS_HERE, e);
+  } catch(msgpack::unpack_error& e){
+    throw CannotDeserializeMessage(ERS_HERE, e);
   }
 }
 
@@ -151,7 +246,7 @@ deserialize(const std::vector<CharType>& v)
     case serialization_type_byte(kJSON): {
       try{
         json j = json::parse(v.begin() + 1, v.end());
-        return j.get<T>();
+        return deserialize_impl_json<T>(j);
       } catch(json::exception& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
       }

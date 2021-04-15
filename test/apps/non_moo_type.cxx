@@ -48,7 +48,7 @@ from_json(const nlohmann::json& j, MyTypeNonIntrusive& m)
   j.at("values").get_to(m.values);
 }
 
-} // end namespace myns
+} // namespace myns
 
 // These two functions provide the serialization/deserialization
 // functionality for MsgPack
@@ -93,6 +93,63 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 } // namespace MSGPACK_DEFAULT_API_NS
 } // namespace msgpack
 
+namespace myns {
+// As for MyTypeNonIntrusive, but this time with only an explicit
+// MsgPack set of serialization/deserialization functions, to test the
+// msgpack<->json functionality in serialize()
+struct MyTypeMsgPackOnly
+{
+  int count;
+  std::string name;
+  std::vector<double> values;
+};
+
+} // namespace myns
+
+// These two functions provide the serialization/deserialization
+// functionality for MsgPack
+namespace msgpack {
+MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
+{
+  namespace adaptor {
+
+  template<>
+  struct pack<myns::MyTypeMsgPackOnly>
+  {
+    template<typename Stream>
+    packer<Stream>& operator()(msgpack::packer<Stream>& o, myns::MyTypeMsgPackOnly const& m) const
+    {
+      // The number here is the number of members in the struct
+      o.pack_array(3);
+      o.pack(m.count);
+      o.pack(m.name);
+      o.pack(m.values);
+      return o;
+    }
+  };
+
+  template<>
+  struct convert<myns::MyTypeMsgPackOnly>
+  {
+    msgpack::object const& operator()(msgpack::object const& o, myns::MyTypeMsgPackOnly& m) const
+    {
+      if (o.type != msgpack::type::ARRAY)
+        throw msgpack::type_error();
+      // The number here is the number of members in the struct
+      if (o.via.array.size != 3)
+        throw msgpack::type_error();
+      m.count = o.via.array.ptr[0].as<int>();
+      m.name = o.via.array.ptr[1].as<std::string>();
+      m.values = o.via.array.ptr[2].as<std::vector<double>>();
+      return o;
+    }
+  };
+
+  } // namespace adaptor
+} // namespace MSGPACK_DEFAULT_API_NS
+} // namespace msgpack
+
+
 template<class T>
 void
 roundtrip(dunedaq::serialization::SerializationType& stype)
@@ -105,6 +162,10 @@ roundtrip(dunedaq::serialization::SerializationType& stype)
   namespace ser = dunedaq::serialization;
 
   std::vector<uint8_t> bytes = ser::serialize(m, stype);
+  if(stype== dunedaq::serialization::kJSON){
+    for(auto byte: bytes) std::cout << byte;
+    std::cout << std::endl;
+  }
   T m_recv = ser::deserialize<T>(bytes);
   assert(m_recv.count  == m.count);
   assert(m_recv.name   == m.name);
@@ -118,5 +179,6 @@ main()
   for (auto stype : { dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }) {
     roundtrip<myns::MyTypeIntrusive>(stype);
     roundtrip<myns::MyTypeNonIntrusive>(stype);
+    roundtrip<myns::MyTypeMsgPackOnly>(stype);
   }
 }
