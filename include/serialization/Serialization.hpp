@@ -41,33 +41,6 @@
   MSGPACK_DEFINE(__VA_ARGS__)                        \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
 
-// template<class T>
-// class dummy
-// {
-// public:
-//   T contained;
-// };
-
-// namespace nlohmann {
-// template <typename T>
-// struct adl_serializer<dummy<T>> {
-//   static void to_json(json& j, const dummy<T>& obj) {
-//     // Convert T to msgpack, then use json::from_msgpack
-//     msgpack::sbuffer buf;
-//     msgpack::pack(buf, obj.contained);
-//     j=json::from_msgpack(buf);
-//   }
-
-//   static void from_json(const json& j, dummy<T>& obj) {
-//     std::vector<uint8_t> v = json::to_msgpack(j);
-//     msgpack::object_handle oh = msgpack::unpack((char*)(v.data()),
-//                                                 v.size());
-//     msgpack::object mobj = oh.get();
-//     obj=mobj.as<dummy<T>>();
-//   }
-// };
-// }
-
 namespace dunedaq {
 
 // clang-format off
@@ -130,6 +103,11 @@ serialization_type_byte(SerializationType stype)
   }
 }
 
+// This template specialization gets called if type T *can* be converted
+// to nlohmann::json, which happens if the user has written the
+// appropriate to_json function. (In that case, the user should have
+// also written a corresponding from_json function, but the template
+// matching doesn't check that.)
 template<class T,
          std::enable_if_t<std::is_convertible<T, nlohmann::json>::value, bool> = true>
 std::vector<uint8_t> // NOLINT
@@ -143,6 +121,33 @@ serialize_impl_json(const T& obj)
   return ret;
 }
 
+// This template specialization gets called if type T *cannot* be
+// converted to nlohmann::json, but *can* be converted to msgpack. The
+// object of type T is serialized to a msgpack buffer, which is then
+// converted to json. This process is not efficient, but if you want
+// performance, you're not using json anyway
+//
+// Typically, msgpack serializers put the class members into a msgpack
+// array. JSON serializers (from to_json or DUNE_DAQ_SERIALIZE)
+// typically put their members in a map, with keys equal to the member
+// variable name. Since this function converts from the msgpack
+// representation to json, we usually end up with the class
+// represented as a json array.
+//
+// To spell it out, with:
+//
+//    class MyClass {
+//      int x;
+//      std::string y;
+//    };
+//
+// `MyClass m{1, "foo"};` serialized via DUNE_DAQ_SERIALIZE would result in  
+//
+// { "x": 1, "y": "foo" }
+//
+// whereas this function would most likely serialize it as
+//
+// [ 1, "foo" ]
 template<class T,
          std::enable_if_t<!std::is_convertible<T, nlohmann::json>::value, bool> = true>
 std::vector<uint8_t> // NOLINT
