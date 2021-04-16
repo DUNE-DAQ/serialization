@@ -1,5 +1,11 @@
 #include "serialization/Serialization.hpp"
 
+#include <boost/preprocessor/cat.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/variadic/to_seq.hpp>
+#include <boost/preprocessor/variadic/size.hpp>
+#include <boost/preprocessor/seq/cat.hpp>
+
 namespace myns {
 
 // A type that's made serializable "intrusively", ie, by changing the type itself
@@ -24,77 +30,13 @@ struct MyTypeNonIntrusive
   std::vector<double> values;
 };
 
-// These two functions provide the serialization/deserialization
-// functionality for nlohmann::json. They don't need to be in the same file as the
-// definition of the type, but they do need to be in the same
-// namespace. I assume that it's not strictly required to name the map
-// keys the same thing as the variable, but it seems sensible
-//
-// For full instructions, see:
-// https://nlohmann.github.io/json/features/arbitrary_types/
-void
-to_json(nlohmann::json& j, const MyTypeNonIntrusive& m)
-{
-  j["count"]  = m.count;
-  j["name"]   = m.name;
-  j["values"] = m.values;
-}
-
-void
-from_json(const nlohmann::json& j, MyTypeNonIntrusive& m)
-{
-  j.at("count").get_to(m.count);
-  j.at("name").get_to(m.name);
-  j.at("values").get_to(m.values);
-}
-
 } // end namespace myns
 
-// These two functions provide the serialization/deserialization
-// functionality for MsgPack
-namespace msgpack {
-MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
-{
-  namespace adaptor {
 
-  template<>
-  struct pack<myns::MyTypeNonIntrusive>
-  {
-    template<typename Stream>
-    packer<Stream>& operator()(msgpack::packer<Stream>& o, myns::MyTypeNonIntrusive const& m) const
-    {
-      // The number here is the number of members in the struct
-      o.pack_array(3);
-      o.pack(m.count);
-      o.pack(m.name);
-      o.pack(m.values);
-      return o;
-    }
-  };
-
-  template<>
-  struct convert<myns::MyTypeNonIntrusive>
-  {
-    msgpack::object const& operator()(msgpack::object const& o, myns::MyTypeNonIntrusive& m) const
-    {
-      if (o.type != msgpack::type::ARRAY)
-        throw msgpack::type_error();
-      // The number here is the number of members in the struct
-      if (o.via.array.size != 3)
-        throw msgpack::type_error();
-      m.count = o.via.array.ptr[0].as<int>();
-      m.name = o.via.array.ptr[1].as<std::string>();
-      m.values = o.via.array.ptr[2].as<std::vector<double>>();
-      return o;
-    }
-  };
-
-  } // namespace adaptor
-} // namespace MSGPACK_DEFAULT_API_NS
-} // namespace msgpack
+DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(myns, MyTypeNonIntrusive, count, name, values)
 
 template<class T>
-void
+bool
 roundtrip(dunedaq::serialization::SerializationType& stype)
 {
   T m;
@@ -106,17 +48,37 @@ roundtrip(dunedaq::serialization::SerializationType& stype)
 
   std::vector<uint8_t> bytes = ser::serialize(m, stype);
   T m_recv = ser::deserialize<T>(bytes);
-  assert(m_recv.count  == m.count);
-  assert(m_recv.name   == m.name);
-  assert(m_recv.values == m.values);
+  bool ok=true;
+  if(m_recv.count != m.count){
+    std::cerr << "count does not match" << std::endl;
+    ok=false;
+  }
+  if(m_recv.name != m.name){
+    std::cerr << "name does not match" << std::endl;
+    ok=false;
+  }
+  if(m_recv.values != m.values){
+    std::cerr << "values does not match" << std::endl;
+    ok=false;
+  }
+  return ok;
 }
 
 int
 main()
 {
   // Test all four combinations of { intrusive, non-intrusive } x { msgpack, json }
+  bool ok=true;
   for (auto stype : { dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }) {
-    roundtrip<myns::MyTypeIntrusive>(stype);
-    roundtrip<myns::MyTypeNonIntrusive>(stype);
+    ok = ok && roundtrip<myns::MyTypeIntrusive>(stype);
+    ok = ok && roundtrip<myns::MyTypeNonIntrusive>(stype);
   }
+  if(!ok){
+    std::cerr << "Failure" << std::endl;
+    exit(1);
+  }
+  else{
+    std::cout << "Success" << std::endl;
+  }
+  exit(0);
 }

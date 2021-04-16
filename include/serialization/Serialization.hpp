@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "boost/preprocessor.hpp"
+
 /**
  * @brief Macro to make a class serializable
  *
@@ -39,6 +41,47 @@
 #define DUNE_DAQ_SERIALIZE(Type, ...)                \
   MSGPACK_DEFINE(__VA_ARGS__)                        \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
+
+#define OPACK(r, data, elem) o.pack(m.elem);
+#define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
+    
+#define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                     \
+  namespace NS {  \
+  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__) \
+  } \
+    namespace msgpack { \
+    MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) \
+    { \
+      namespace adaptor { \
+      template<> \
+      struct pack<NS::Type>                     \
+      { \
+        template<typename Stream> \
+        packer<Stream>& operator()(msgpack::packer<Stream>& o, NS::Type const& m) const \
+        { \
+          o.pack_array(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)); \
+          BOOST_PP_SEQ_FOR_EACH(OPACK, , BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__)) \
+          return o; \
+        } \
+      }; \
+      template<> \
+        struct convert<NS::Type>                \
+      { \
+        msgpack::object const& operator()(msgpack::object const& o,  NS::Type& m) const \
+        { \
+          if (o.type != msgpack::type::ARRAY) \
+            throw msgpack::type_error(); \
+          if (o.via.array.size != BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)) \
+            throw msgpack::type_error(); \
+          int i=0; \
+          BOOST_PP_SEQ_FOR_EACH(OUNPACK, , BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__)) \
+          return o; \
+        } \
+      }; \
+      } \
+    } \
+}
+
 
 namespace dunedaq {
 
