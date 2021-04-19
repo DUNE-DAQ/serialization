@@ -19,8 +19,10 @@
 #include <string>
 #include <vector>
 
+#include "boost/preprocessor.hpp"
+
 /**
- * @brief Macro to make a class serializable
+ * @brief Macro to make a class/struct serializable intrusively
  *
  * Call the macro inside your class declaration, with the first
  * argument being the class name, followed by each of the member
@@ -36,9 +38,70 @@
  *      };
  *
  */
-#define DUNE_DAQ_SERIALIZE(Type, ...)                \
-  MSGPACK_DEFINE(__VA_ARGS__)                        \
+#define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
+  MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
+
+// Helper macros for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
+#define OPACK(r, data, elem) o.pack(m.elem);
+#define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
+
+/**
+ * @brief Macro to make a class/struct serializable non-intrusively
+ *
+ * Call the macro outside your class declaration, from the global
+ * namespace. The first argument is the namespace of your class, the
+ * second is the class name, and the rest of the arguments list the
+ * member variables. Example:
+ *
+ *      namespace ns {
+ *      struct MyType
+ *      {
+ *        int i;
+ *        std::string s;
+ *        std::vector<double> v;
+ *      }
+ *      }
+ *
+ *      DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(ns, MyType, i, s, v);
+ *
+ */
+#define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
+  namespace NS {                                                                                                       \
+  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
+  }                                                                                                                    \
+  namespace msgpack {                                                                                                  \
+  MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)                                                                \
+  {                                                                                                                    \
+    namespace adaptor {                                                                                                \
+    template<>                                                                                                         \
+    struct pack<NS::Type>                                                                                              \
+    {                                                                                                                  \
+      template<typename Stream>                                                                                        \
+      packer<Stream>& operator()(msgpack::packer<Stream>& o, NS::Type const& m) const                                  \
+      {                                                                                                                \
+        o.pack_array(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__));                                                             \
+        BOOST_PP_SEQ_FOR_EACH(OPACK, , BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))                                          \
+        return o;                                                                                                      \
+      }                                                                                                                \
+    };                                                                                                                 \
+    template<>                                                                                                         \
+    struct convert<NS::Type>                                                                                           \
+    {                                                                                                                  \
+      msgpack::object const& operator()(msgpack::object const& o, NS::Type& m) const                                   \
+      {                                                                                                                \
+        if (o.type != msgpack::type::ARRAY)                                                                            \
+          throw msgpack::type_error();                                                                                 \
+        if (o.via.array.size != BOOST_PP_VARIADIC_SIZE(__VA_ARGS__))                                                   \
+          throw msgpack::type_error();                                                                                 \
+        int i = 0;                                                                                                     \
+        BOOST_PP_SEQ_FOR_EACH(OUNPACK, , BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))                                        \
+        return o;                                                                                                      \
+      }                                                                                                                \
+    };                                                                                                                 \
+    }                                                                                                                  \
+  }                                                                                                                    \
+  }
 
 namespace dunedaq {
 
@@ -60,8 +123,6 @@ ERS_DECLARE_ISSUE(serialization,                        // namespace
 ERS_DECLARE_ISSUE(serialization,                        // namespace
                   CannotDeserializeMessage,             // issue name
                   "Cannot deserialize message",)        // message
-
-
 
 // clang-format on
 
@@ -149,15 +210,15 @@ deserialize(const std::vector<CharType>& v)
   // the rest is the actual message
   switch (v[0]) {
     case serialization_type_byte(kJSON): {
-      try{
+      try {
         json j = json::parse(v.begin() + 1, v.end());
         return j.get<T>();
-      } catch(json::exception& e) {
+      } catch (json::exception& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
       }
     }
     case serialization_type_byte(kMsgPack): {
-      try{
+      try {
         // The lambda function here is of type `unpack_reference_func`
         // as described at
         // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
@@ -169,17 +230,19 @@ deserialize(const std::vector<CharType>& v)
         // return true (ie, store a pointer in the MsgPack object; no
         // copy) everywhere. Doing so results in a factor ~2 speedup in
         // deserializing Fragment, which is just a large BIN field
-        msgpack::object_handle oh = msgpack::unpack((char*)(v.data() + 1),
-                                                    v.size() - 1,
-                                                    [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool {return true;}); // NOLINT
+        msgpack::object_handle oh =
+          msgpack::unpack((char*)(v.data() + 1),
+                          v.size() - 1,
+                          [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void * /*user_data*/) -> bool {
+                            return true;
+                          }); // NOLINT
         msgpack::object obj = oh.get();
         return obj.as<T>();
-      } catch(msgpack::type_error& e) {
+      } catch (msgpack::type_error& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
-      } catch(msgpack::unpack_error& e){
+      } catch (msgpack::unpack_error& e) {
         throw CannotDeserializeMessage(ERS_HERE, e);
       }
-
     }
     default:
       throw UnknownSerializationTypeByte(ERS_HERE, (char)v[0]); // NOLINT
