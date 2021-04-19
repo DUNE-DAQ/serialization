@@ -22,7 +22,7 @@
 #include "boost/preprocessor.hpp"
 
 /**
- * @brief Macro to make a class serializable
+ * @brief Macro to make a class/struct serializable intrusively
  *
  * Call the macro inside your class declaration, with the first
  * argument being the class name, followed by each of the member
@@ -42,9 +42,30 @@
   MSGPACK_DEFINE(__VA_ARGS__)                        \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
 
+// Helper macros for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
 #define OPACK(r, data, elem) o.pack(m.elem);
 #define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
-    
+
+/**
+ * @brief Macro to make a class/struct serializable non-intrusively
+ *
+ * Call the macro outside your class declaration, from the global
+ * namespace. The first argument is the namespace of your class, the
+ * second is the class name, and the rest of the arguments list the
+ * member variables. Example:
+ *
+ *      namespace ns {
+ *      struct MyType
+ *      {
+ *        int i;
+ *        std::string s;
+ *        std::vector<double> v;
+ *      }
+ *      }
+ *
+ *      DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(ns, MyType, i, s, v);
+ *
+ */
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                     \
   namespace NS {  \
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__) \
