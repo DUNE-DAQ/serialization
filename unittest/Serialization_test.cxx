@@ -7,6 +7,7 @@
  */
 
 #include "serialization/Serialization.hpp"
+#include "serialization/serialize_variant.hpp"
 
 /**
  * @brief Name of this test module
@@ -30,6 +31,18 @@ struct MyTypeIntrusive
   DUNE_DAQ_SERIALIZE(MyTypeIntrusive, count, name, values);
 };
 
+namespace test {
+// A type that's made serializable "intrusively", ie, by changing the type itself
+struct MyTypeNonIntrusive
+{
+  float a_float;
+  std::vector<int> values;
+};
+
+}
+
+DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(test, MyTypeNonIntrusive, a_float, values)
+
 BOOST_AUTO_TEST_SUITE(Serialization_test)
 
 /**
@@ -52,6 +65,51 @@ BOOST_DATA_TEST_CASE(SerializationRoundTrip,
   BOOST_CHECK_EQUAL(m_recv.count, m.count);
   BOOST_CHECK_EQUAL(m_recv.name, m.name);
   BOOST_CHECK_EQUAL_COLLECTIONS(m_recv.values.begin(), m_recv.values.end(), m.values.begin(), m.values.end());
+}
+
+BOOST_DATA_TEST_CASE(SerializeVariant,
+                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }))
+{
+  MyTypeIntrusive m;
+  m.count = 3;
+  m.name = "foo";
+  m.values.push_back(3.1416);
+  m.values.push_back(2.781);
+
+  namespace ser = dunedaq::serialization;
+
+  using VariantType = std::variant<MyTypeIntrusive, test::MyTypeNonIntrusive>;
+
+  {
+    VariantType v = m;
+    std::vector<uint8_t> bytes = ser::serialize(v, sample);
+    // std::cout << "Serialized bytes: ";
+    // for(auto& byte : bytes) std::cout << byte << " ";
+    // std::cout << std::endl;
+    VariantType v_recv = ser::deserialize<VariantType>(bytes);
+    BOOST_CHECK_EQUAL(v_recv.index(), v.index());
+    MyTypeIntrusive mv_recv=std::get<MyTypeIntrusive>(v_recv);
+    BOOST_CHECK_EQUAL(mv_recv.count, m.count);
+    BOOST_CHECK_EQUAL(mv_recv.name, m.name);
+    BOOST_CHECK_EQUAL_COLLECTIONS(mv_recv.values.begin(), mv_recv.values.end(), m.values.begin(), m.values.end());
+  }
+
+  {
+    test::MyTypeNonIntrusive m2;
+    m2.a_float = 1.0;
+    m2.values = { 1, 2, 3 };
+    
+    VariantType v = m2;
+    std::vector<uint8_t> bytes = ser::serialize(v, sample);
+    // std::cout << "Serialized bytes: ";
+    // for(auto& byte : bytes) std::cout << byte << " ";
+    // std::cout << std::endl;
+    VariantType v_recv = ser::deserialize<VariantType>(bytes);
+    BOOST_CHECK_EQUAL(v_recv.index(), v.index());
+    test::MyTypeNonIntrusive mv_recv=std::get<test::MyTypeNonIntrusive>(v_recv);
+    BOOST_CHECK_EQUAL(mv_recv.a_float, m2.a_float);
+    BOOST_CHECK_EQUAL_COLLECTIONS(mv_recv.values.begin(), mv_recv.values.end(), m2.values.begin(), m2.values.end());
+  }
 }
 
 BOOST_AUTO_TEST_CASE(InvalidSerializationTypes)
