@@ -1,8 +1,20 @@
+/**
+ * @file inheritance.cxx
+ *
+ *
+ * This is part of the DUNE DAQ Application Framework, copyright 2020.
+ * Licensing/copyright details are in the COPYING file that you should have
+ * received with this code.
+ */
+
+#include "logging/Logging.hpp"
 #include "serialization/Serialization.hpp"
 
 #include "msgpack/adaptor/define_decl.hpp"
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 // A type that's made serializable "intrusively", ie, by changing the type itself
 struct Base
@@ -97,12 +109,12 @@ main()
 
   namespace ser = dunedaq::serialization;
 
-  std::vector<uint8_t> bytes = ser::serialize(d, ser::kMsgPack);
-  std::cout << "Receiving to Derived" << std::endl;
+  std::vector<uint8_t> bytes = ser::serialize(d, ser::kMsgPack); // NOLINT(build/unsigned)
+  TLOG() << "Receiving to Derived";
   Derived d_recv = ser::deserialize<Derived>(bytes);
   assert(d_recv.i == d.i);
   assert(d_recv.s == d.s);
-  std::cout << "Receiving to Base" << std::endl;
+  TLOG() << "Receiving to Base";
   Base b_recv = ser::deserialize<Base>(bytes);
   assert(b_recv.i == d.i);
 }

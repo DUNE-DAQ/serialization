@@ -12,14 +12,13 @@
 
 #include "ers/Issue.hpp"
 
+#include "boost/preprocessor.hpp"
 #include "msgpack.hpp"
 #include "nlohmann/json.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
-
-#include "boost/preprocessor.hpp"
 
 /**
  * @brief Macro to make a class/struct serializable intrusively
@@ -38,12 +37,15 @@
  *      };
  *
  */
+// NOLINTNEXTLINE(build/define_used)
 #define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
   MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
   NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
 
 // Helper macros for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
+// NOLINTNEXTLINE(build/define_used)
 #define OPACK(r, data, elem) o.pack(m.elem);
+// NOLINTNEXTLINE
 #define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
 
 /**
@@ -66,6 +68,7 @@
  *      DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(ns, MyType, i, s, v);
  *
  */
+// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
   namespace NS {                                                                                                       \
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
@@ -118,7 +121,7 @@ ERS_DECLARE_ISSUE(serialization,                        // namespace
 ERS_DECLARE_ISSUE(serialization,                        // namespace
                   UnknownSerializationTypeByte,         // issue name
                   "Unknown serialization type " << t,   // message
-                  ((char)t))                            // attributes
+                  ((char)t))                            // attributes // NOLINT
 
 ERS_DECLARE_ISSUE(serialization,                        // namespace
                   CannotDeserializeMessage,             // issue name
@@ -150,7 +153,7 @@ from_string(const std::string s)
   throw UnknownSerializationTypeString(ERS_HERE, s);
 }
 
-constexpr uint8_t
+constexpr uint8_t // NOLINT(build/unsigned)
 serialization_type_byte(SerializationType stype)
 {
   switch (stype) {
@@ -167,14 +170,14 @@ serialization_type_byte(SerializationType stype)
  * @brief Serialize object @p obj using serialization method @p stype
  */
 template<class T>
-std::vector<uint8_t> // NOLINT
+std::vector<uint8_t> // NOLINT(build/unsigned)
 serialize(const T& obj, SerializationType stype)
 {
   switch (stype) {
     case kJSON: {
       nlohmann::json j = obj;
       nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> ret(s.size() + 1);
+      std::vector<uint8_t> ret(s.size() + 1); // NOLINT(build/unsigned)
       ret[0] = serialization_type_byte(stype);
       std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
       return ret;
@@ -187,7 +190,7 @@ serialize(const T& obj, SerializationType stype)
       // tests aren't any faster than this
       msgpack::sbuffer buf;
       msgpack::pack(buf, obj);
-      std::vector<uint8_t> ret(buf.size() + 1);
+      std::vector<uint8_t> ret(buf.size() + 1); // NOLINT(build/unsigned)
       ret[0] = serialization_type_byte(stype);
       std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
       return ret;
@@ -231,11 +234,11 @@ deserialize(const std::vector<CharType>& v)
         // copy) everywhere. Doing so results in a factor ~2 speedup in
         // deserializing Fragment, which is just a large BIN field
         msgpack::object_handle oh =
-          msgpack::unpack((char*)(v.data() + 1),
+          msgpack::unpack((char*)(v.data() + 1), // NOLINT
                           v.size() - 1,
                           [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void * /*user_data*/) -> bool {
                             return true;
-                          }); // NOLINT
+                          });
         msgpack::object obj = oh.get();
         return obj.as<T>();
       } catch (msgpack::type_error& e) {

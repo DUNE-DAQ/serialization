@@ -39,7 +39,7 @@ struct MyTypeNonIntrusive
   std::vector<int> values;
 };
 
-}
+} // namespace test
 
 DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(test, MyTypeNonIntrusive, a_float, values)
 
@@ -60,7 +60,7 @@ BOOST_DATA_TEST_CASE(SerializationRoundTrip,
 
   namespace ser = dunedaq::serialization;
 
-  std::vector<uint8_t> bytes = ser::serialize(m, sample);
+  std::vector<uint8_t> bytes = ser::serialize(m, sample); // NOLINT(build/unsigned)
   MyTypeIntrusive m_recv = ser::deserialize<MyTypeIntrusive>(bytes);
   BOOST_CHECK_EQUAL(m_recv.count, m.count);
   BOOST_CHECK_EQUAL(m_recv.name, m.name);
@@ -82,13 +82,13 @@ BOOST_DATA_TEST_CASE(SerializeVariant,
 
   {
     VariantType v = m;
-    std::vector<uint8_t> bytes = ser::serialize(v, sample);
+    std::vector<uint8_t> bytes = ser::serialize(v, sample); // NOLINT(build/unsigned)
     // std::cout << "Serialized bytes: ";
     // for(auto& byte : bytes) std::cout << byte << " ";
     // std::cout << std::endl;
     VariantType v_recv = ser::deserialize<VariantType>(bytes);
     BOOST_CHECK_EQUAL(v_recv.index(), v.index());
-    MyTypeIntrusive mv_recv=std::get<MyTypeIntrusive>(v_recv);
+    MyTypeIntrusive mv_recv = std::get<MyTypeIntrusive>(v_recv);
     BOOST_CHECK_EQUAL(mv_recv.count, m.count);
     BOOST_CHECK_EQUAL(mv_recv.name, m.name);
     BOOST_CHECK_EQUAL_COLLECTIONS(mv_recv.values.begin(), mv_recv.values.end(), m.values.begin(), m.values.end());
@@ -98,15 +98,15 @@ BOOST_DATA_TEST_CASE(SerializeVariant,
     test::MyTypeNonIntrusive m2;
     m2.a_float = 1.0;
     m2.values = { 1, 2, 3 };
-    
+
     VariantType v = m2;
-    std::vector<uint8_t> bytes = ser::serialize(v, sample);
+    std::vector<uint8_t> bytes = ser::serialize(v, sample); // NOLINT(build/unsigned)
     // std::cout << "Serialized bytes: ";
     // for(auto& byte : bytes) std::cout << byte << " ";
     // std::cout << std::endl;
     VariantType v_recv = ser::deserialize<VariantType>(bytes);
     BOOST_CHECK_EQUAL(v_recv.index(), v.index());
-    test::MyTypeNonIntrusive mv_recv=std::get<test::MyTypeNonIntrusive>(v_recv);
+    test::MyTypeNonIntrusive mv_recv = std::get<test::MyTypeNonIntrusive>(v_recv);
     BOOST_CHECK_EQUAL(mv_recv.a_float, m2.a_float);
     BOOST_CHECK_EQUAL_COLLECTIONS(mv_recv.values.begin(), mv_recv.values.end(), m2.values.begin(), m2.values.end());
   }

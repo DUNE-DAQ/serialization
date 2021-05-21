@@ -1,3 +1,13 @@
+/**
+ * @file non_moo_type.cxx
+ *
+ *
+ * This is part of the DUNE DAQ Application Framework, copyright 2020.
+ * Licensing/copyright details are in the COPYING file that you should have
+ * received with this code.
+ */
+
+#include "logging/Logging.hpp"
 #include "serialization/Serialization.hpp"
 
 #include <boost/preprocessor/cat.hpp>
@@ -5,6 +15,9 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/variadic/size.hpp>
 #include <boost/preprocessor/variadic/to_seq.hpp>
+
+#include <string>
+#include <vector>
 
 namespace myns {
 
@@ -45,19 +58,19 @@ roundtrip(dunedaq::serialization::SerializationType& stype)
 
   namespace ser = dunedaq::serialization;
 
-  std::vector<uint8_t> bytes = ser::serialize(m, stype);
+  std::vector<uint8_t> bytes = ser::serialize(m, stype); // NOLINT(build/unsigned)
   T m_recv = ser::deserialize<T>(bytes);
   bool ok = true;
   if (m_recv.count != m.count) {
-    std::cerr << "count does not match" << std::endl;
+    TLOG(TLVL_ERROR) << "count does not match";
     ok = false;
   }
   if (m_recv.name != m.name) {
-    std::cerr << "name does not match" << std::endl;
+    TLOG(TLVL_ERROR) << "name does not match";
     ok = false;
   }
   if (m_recv.values != m.values) {
-    std::cerr << "values does not match" << std::endl;
+    TLOG(TLVL_ERROR) << "values does not match";
     ok = false;
   }
   return ok;
@@ -73,10 +86,10 @@ main()
     ok = ok && roundtrip<myns::MyTypeNonIntrusive>(stype);
   }
   if (!ok) {
-    std::cerr << "Failure" << std::endl;
+    TLOG(TLVL_ERROR) << "Failure";
     exit(1);
   } else {
-    std::cout << "Success" << std::endl;
+    TLOG() << "Success";
   }
   exit(0);
 }

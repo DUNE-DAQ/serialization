@@ -12,7 +12,7 @@ find_package(logging REQUIRED)
 ##############################################################################
 # Schema
 
-daq_codegen(*.jsonnet TEST TEMPLATES Structs.hpp.j2 Nljs.hpp.j2)
+daq_codegen(*.jsonnet TEST TEMPLATES Structs.hpp.j2 Nljs.hpp.j2 MsgP.hpp.j2)
 
 ##############################################################################
 # Main library
