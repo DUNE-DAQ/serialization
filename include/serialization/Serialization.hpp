@@ -234,7 +234,7 @@ deserialize(const std::vector<CharType>& v)
         // copy) everywhere. Doing so results in a factor ~2 speedup in
         // deserializing Fragment, which is just a large BIN field
         msgpack::object_handle oh =
-          msgpack::unpack((char*)(v.data() + 1), // NOLINT
+          msgpack::unpack(const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)),
                           v.size() - 1,
                           [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void * /*user_data*/) -> bool {
                             return true;
