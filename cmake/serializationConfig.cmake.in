@@ -4,9 +4,10 @@
 include(CMakeFindDependencyMacro)
 
 find_dependency(appfwk)
-find_dependency(ipm)
+find_dependency(logging)
 find_dependency(nlohmann_json)
 find_dependency(msgpack)
+find_dependency(ers)
 
 if (EXISTS ${CMAKE_SOURCE_DIR}/@PROJECT_NAME@)
 
