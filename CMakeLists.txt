@@ -9,6 +9,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(msgpack REQUIRED)
 find_package(logging REQUIRED)
 find_package(ers REQUIRED)
+find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 ##############################################################################
 # Schema
