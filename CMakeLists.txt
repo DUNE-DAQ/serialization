@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(serialization VERSION 1.2.2)
+project(serialization VERSION 1.2.3)
 
 find_package(daq-cmake REQUIRED)
 daq_setup_environment()
@@ -8,6 +8,8 @@ find_package(appfwk REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(msgpack REQUIRED)
 find_package(logging REQUIRED)
+find_package(ers REQUIRED)
+find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 ##############################################################################
 # Schema
