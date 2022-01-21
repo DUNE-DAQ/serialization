@@ -3,7 +3,6 @@
 
 include(CMakeFindDependencyMacro)
 
-find_dependency(appfwk)
 find_dependency(logging)
 find_dependency(nlohmann_json)
 find_dependency(msgpack)
