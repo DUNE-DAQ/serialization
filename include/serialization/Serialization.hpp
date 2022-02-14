@@ -20,6 +20,9 @@
 #include <string>
 #include <vector>
 
+#define DUNE_DAQ_SERIALIZABLE(Type) \
+ template<> struct dunedaq::serialization::is_serializable<Type> { static constexpr bool value = true; }
+
 /**
  * @brief Macro to make a class/struct serializable intrusively
  *
@@ -40,11 +43,7 @@
 // NOLINTNEXTLINE(build/define_used)
 #define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
   MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
-  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)                                                                    \
-  struct is_serializable                                                                                               \
-  {                                                                                                                    \
-    static constexpr bool value = true;                                                                                \
-  }
+  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
 
 // Helper macros for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
 // NOLINTNEXTLINE(build/define_used)
@@ -74,6 +73,7 @@
  */
 // NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
+  DUNE_DAQ_SERIALIZABLE(NS::Type);                                                                                     \
   namespace NS {                                                                                                       \
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
   }                                                                                                                    \
@@ -134,6 +134,8 @@ ERS_DECLARE_ISSUE(serialization,                        // namespace
 // clang-format on
 
 namespace serialization {
+
+    template<typename T> struct is_serializable : std::false_type {};
 
 /**
  * @brief Serialization methods that are available
