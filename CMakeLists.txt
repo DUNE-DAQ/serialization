@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.12)
-project(serialization VERSION 1.2.3)
+project(serialization VERSION 1.2.4)
 
 find_package(daq-cmake REQUIRED)
 daq_setup_environment()
 
-find_package(appfwk REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(msgpack REQUIRED)
 find_package(logging REQUIRED)
