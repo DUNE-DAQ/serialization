@@ -20,6 +20,13 @@
 #include <string>
 #include <vector>
 
+#define DUNE_DAQ_SERIALIZABLE(Type)                                                                                    \
+  template<>                                                                                                           \
+  struct dunedaq::serialization::is_serializable<Type>                                                                 \
+  {                                                                                                                    \
+    static constexpr bool value = true;                                                                                \
+  }
+
 /**
  * @brief Macro to make a class/struct serializable intrusively
  *
@@ -70,6 +77,7 @@
  */
 // NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
+  DUNE_DAQ_SERIALIZABLE(NS::Type);                                                                                     \
   namespace NS {                                                                                                       \
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
   }                                                                                                                    \
@@ -130,6 +138,10 @@ ERS_DECLARE_ISSUE(serialization,                        // namespace
 // clang-format on
 
 namespace serialization {
+
+template<typename T>
+struct is_serializable : std::false_type
+{};
 
 /**
  * @brief Serialization methods that are available
