@@ -117,6 +117,7 @@
 namespace dunedaq {
 
 // clang-format off
+// Disable coverage collection LCOV_EXCL_START
 ERS_DECLARE_ISSUE(serialization,                        // namespace
                   UnknownSerializationTypeString,       // issue name
                   "Unknown serialization type " << t,   // message
@@ -136,6 +137,7 @@ ERS_DECLARE_ISSUE(serialization,                        // namespace
                   "Cannot deserialize message",)        // message
 
 // clang-format on
+// Re-enable coverage collection LCOV_EXCL_STOP
 
 namespace serialization {
 
