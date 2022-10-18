@@ -85,7 +85,7 @@
  */
 // NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
-  DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                               \
+  DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                              \
   namespace NS {                                                                                                       \
   NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
   }                                                                                                                    \
