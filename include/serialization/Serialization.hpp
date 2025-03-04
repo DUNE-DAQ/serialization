@@ -123,6 +123,41 @@
   }                                                                                                                    \
   }
 
+#define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE_MSGPACK(NS, Type, ...)                                                        \
+  DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                              \
+  namespace msgpack {                                                                                                  \
+  MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)                                                                \
+  {                                                                                                                    \
+    namespace adaptor {                                                                                                \
+    template<>                                                                                                         \
+    struct pack<NS::Type>                                                                                              \
+    {                                                                                                                  \
+      template<typename Stream>                                                                                        \
+      packer<Stream>& operator()(msgpack::packer<Stream>& o, NS::Type const& m) const                                  \
+      {                                                                                                                \
+        o.pack_array(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__));                                                             \
+        BOOST_PP_SEQ_FOR_EACH(OPACK, , BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))                                          \
+        return o;                                                                                                      \
+      }                                                                                                                \
+    };                                                                                                                 \
+    template<>                                                                                                         \
+    struct convert<NS::Type>                                                                                           \
+    {                                                                                                                  \
+      msgpack::object const& operator()(msgpack::object const& o, NS::Type& m) const                                   \
+      {                                                                                                                \
+        if (o.type != msgpack::type::ARRAY)                                                                            \
+          throw msgpack::type_error();                                                                                 \
+        if (o.via.array.size != BOOST_PP_VARIADIC_SIZE(__VA_ARGS__))                                                   \
+          throw msgpack::type_error();                                                                                 \
+        int i = 0;                                                                                                     \
+        BOOST_PP_SEQ_FOR_EACH(OUNPACK, , BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))                                        \
+        return o;                                                                                                      \
+      }                                                                                                                \
+    };                                                                                                                 \
+    }                                                                                                                  \
+  }                                                                                                                    \
+  }
+
 namespace dunedaq {
 
 // clang-format off
@@ -231,6 +266,24 @@ serialize(const T& obj, SerializationType stype)
   }
 }
 
+
+template<class T>
+std::vector<uint8_t> // NOLINT(build/unsigned)
+serialize_msgpack(const T& obj)
+{
+  // Serialize into the sbuffer and then copy to a
+  // std::vector. Seems like it would be more efficient to
+  // write directly to the vector (by creating a class that
+  // implements `void write(char* buf, size_t len)`), but my
+  // tests aren't any faster than this
+  msgpack::sbuffer buf;
+  msgpack::pack(buf, obj);
+  std::vector<uint8_t> ret(buf.size() + 1); // NOLINT(build/unsigned)
+  ret[0] = serialization_type_byte(SerializationType::kMsgPack);
+  std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
+  return ret;
+}
+
 /**
  * @brief Deserialize vector of bytes @p v into an instance of class @p T
  */
@@ -251,6 +304,44 @@ deserialize(const std::vector<CharType>& v)
         throw CannotDeserializeMessage(ERS_HERE, e);
       }
     }
+    case serialization_type_byte(kMsgPack): {
+      try {
+        // The lambda function here is of type `unpack_reference_func`
+        // as described at
+        // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
+        // . It is called for every STR, BIN and EXT field in the
+        // MsgPack data. If the function returns false, the object is
+        // copied into MsgPack's "zone", otherwise a pointer to the
+        // original buffer is stored. Our input buffer is going to exist
+        // at least until the end of this function, so it's safe to
+        // return true (ie, store a pointer in the MsgPack object; no
+        // copy) everywhere. Doing so results in a factor ~2 speedup in
+        // deserializing Fragment, which is just a large BIN field
+        msgpack::object_handle oh = msgpack::unpack(
+          const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)),
+          v.size() - 1,
+          [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool { return true; });
+        msgpack::object obj = oh.get();
+        return obj.as<T>();
+      } catch (msgpack::type_error& e) {
+        throw CannotDeserializeMessage(ERS_HERE, e);
+      } catch (msgpack::unpack_error& e) {
+        throw CannotDeserializeMessage(ERS_HERE, e);
+      }
+    }
+    default:
+      throw UnknownSerializationTypeByte(ERS_HERE, (char)v[0]); // NOLINT
+  }
+}
+
+
+template<class T, typename CharType = unsigned char>
+T
+deserialize_msgpack(const std::vector<CharType>& v)
+{
+  // The first byte in the array indicates the serialization format;
+  // the rest is the actual message
+  switch (v[0]) {
     case serialization_type_byte(kMsgPack): {
       try {
         // The lambda function here is of type `unpack_reference_func`
