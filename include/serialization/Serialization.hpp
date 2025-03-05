@@ -65,7 +65,7 @@
 #define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
 
 /**
- * @brief Macro to make a class/struct serializable non-intrusively
+ * @brief Macro to make a class/struct serializable non-intrusively by JSON and MsgPack.
  *
  * Call the macro outside your class declaration, from the global
  * namespace. The first argument is the namespace of your class, the
@@ -123,6 +123,54 @@
   }                                                                                                                    \
   }
 
+/**
+ * @brief Macro to make a class/struct serializable non-intrusively by JSON.
+ *
+ * Call the macro outside your class declaration, from the global
+ * namespace. The first argument is the namespace of your class, the
+ * second is the class name, and the rest of the arguments list the
+ * member variables. Example:
+ *
+ *      namespace ns {
+ *      struct MyType
+ *      {
+ *        int i;
+ *        std::string s;
+ *        std::vector<double> v;
+ *      }
+ *      }
+ *
+ *      DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(ns, MyType, i, s, v);
+ *
+ */
+// NOLINTNEXTLINE
+#define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE_JSON(NS, Type, ...)                                                           \
+  DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                              \
+  namespace NS {                                                                                                       \
+  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
+  }                                                                                                                    \
+
+/**
+ * @brief Macro to make a class/struct serializable non-intrusively by MsgPack.
+ *
+ * Call the macro outside your class declaration, from the global
+ * namespace. The first argument is the namespace of your class, the
+ * second is the class name, and the rest of the arguments list the
+ * member variables. Example:
+ *
+ *      namespace ns {
+ *      struct MyType
+ *      {
+ *        int i;
+ *        std::string s;
+ *        std::vector<double> v;
+ *      }
+ *      }
+ *
+ *      DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(ns, MyType, i, s, v);
+ *
+ */
+// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE_MSGPACK(NS, Type, ...)                                                        \
   DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                              \
   namespace msgpack {                                                                                                  \
@@ -237,33 +285,14 @@ serialization_type_byte(SerializationType stype)
  */
 template<class T>
 std::vector<uint8_t> // NOLINT(build/unsigned)
-serialize(const T& obj, SerializationType stype)
+serialize_json(const T& obj)
 {
-  switch (stype) {
-    case kJSON: {
-      nlohmann::json j = obj;
-      nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> ret(s.size() + 1); // NOLINT(build/unsigned)
-      ret[0] = serialization_type_byte(stype);
-      std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
-      return ret;
-    }
-    case kMsgPack: {
-      // Serialize into the sbuffer and then copy to a
-      // std::vector. Seems like it would be more efficient to
-      // write directly to the vector (by creating a class that
-      // implements `void write(char* buf, size_t len)`), but my
-      // tests aren't any faster than this
-      msgpack::sbuffer buf;
-      msgpack::pack(buf, obj);
-      std::vector<uint8_t> ret(buf.size() + 1); // NOLINT(build/unsigned)
-      ret[0] = serialization_type_byte(stype);
-      std::copy(buf.data(), buf.data() + buf.size(), ret.begin() + 1); // NOLINT
-      return ret;
-    }
-    default:
-      throw UnknownSerializationTypeEnum(ERS_HERE);
-  }
+  nlohmann::json j = obj;
+  nlohmann::json::string_t s = j.dump();
+  std::vector<uint8_t> ret(s.size() + 1); // NOLINT(build/unsigned)
+  ret[0] = serialization_type_byte(kJSON);
+  std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
+  return ret;
 }
 
 
@@ -285,87 +314,90 @@ serialize_msgpack(const T& obj)
 }
 
 /**
+ * @brief Serialize object @p obj using serialization method @p stype
+ */
+template<class T>
+std::vector<uint8_t> // NOLINT(build/unsigned)
+serialize(const T& obj, SerializationType stype)
+{
+  switch (stype) {
+    case kJSON: {
+      return serialize_json<T>(obj);
+    }
+    case kMsgPack: {
+      return serialize_msgpack<T>(obj);
+    }
+    default:
+      throw UnknownSerializationTypeEnum(ERS_HERE);
+  }
+}
+
+/**
+ * @brief Deserialize vector of bytes @p v into an instance of class @p T using JSON.
+ */
+template<class T, typename CharType = unsigned char>
+T
+deserialize_json(const std::vector<CharType>& v)
+{
+  using json = nlohmann::json;
+
+  // Skip the first byte to parse the actual message.
+  try {
+    json j = json::parse(v.begin() + 1, v.end());
+    return j.get<T>();
+  } catch (json::exception& e) {
+    throw CannotDeserializeMessage(ERS_HERE, e);
+  }
+}
+
+/**
+ * @brief Deserialize vector of bytes @p v into an instance of class @p T using MsgPack.
+ */
+template<class T, typename CharType = unsigned char>
+T
+deserialize_msgpack(const std::vector<CharType>& v)
+{
+  // Skip the first byte to parse the actual message.
+  try {
+    // The lambda function here is of type `unpack_reference_func`
+    // as described at
+    // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
+    // . It is called for every STR, BIN and EXT field in the
+    // MsgPack data. If the function returns false, the object is
+    // copied into MsgPack's "zone", otherwise a pointer to the
+    // original buffer is stored. Our input buffer is going to exist
+    // at least until the end of this function, so it's safe to
+    // return true (ie, store a pointer in the MsgPack object; no
+    // copy) everywhere. Doing so results in a factor ~2 speedup in
+    // deserializing Fragment, which is just a large BIN field
+    msgpack::object_handle oh = msgpack::unpack(
+      const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)),
+      v.size() - 1,
+      [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool { return true; });
+    msgpack::object obj = oh.get();
+    return obj.as<T>();
+  } catch (msgpack::type_error& e) {
+    throw CannotDeserializeMessage(ERS_HERE, e);
+  } catch (msgpack::unpack_error& e) {
+    throw CannotDeserializeMessage(ERS_HERE, e);
+  }
+}
+
+/**
  * @brief Deserialize vector of bytes @p v into an instance of class @p T
  */
 template<class T, typename CharType = unsigned char>
 T
 deserialize(const std::vector<CharType>& v)
 {
-  using json = nlohmann::json;
-
   // The first byte in the array indicates the serialization format;
   // the rest is the actual message
   switch (v[0]) {
     case serialization_type_byte(kJSON): {
-      try {
-        json j = json::parse(v.begin() + 1, v.end());
-        return j.get<T>();
-      } catch (json::exception& e) {
-        throw CannotDeserializeMessage(ERS_HERE, e);
-      }
+      return deserialize_json<T>(v);
     }
     case serialization_type_byte(kMsgPack): {
-      try {
-        // The lambda function here is of type `unpack_reference_func`
-        // as described at
-        // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
-        // . It is called for every STR, BIN and EXT field in the
-        // MsgPack data. If the function returns false, the object is
-        // copied into MsgPack's "zone", otherwise a pointer to the
-        // original buffer is stored. Our input buffer is going to exist
-        // at least until the end of this function, so it's safe to
-        // return true (ie, store a pointer in the MsgPack object; no
-        // copy) everywhere. Doing so results in a factor ~2 speedup in
-        // deserializing Fragment, which is just a large BIN field
-        msgpack::object_handle oh = msgpack::unpack(
-          const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)),
-          v.size() - 1,
-          [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool { return true; });
-        msgpack::object obj = oh.get();
-        return obj.as<T>();
-      } catch (msgpack::type_error& e) {
-        throw CannotDeserializeMessage(ERS_HERE, e);
-      } catch (msgpack::unpack_error& e) {
-        throw CannotDeserializeMessage(ERS_HERE, e);
-      }
-    }
-    default:
-      throw UnknownSerializationTypeByte(ERS_HERE, (char)v[0]); // NOLINT
-  }
-}
-
-
-template<class T, typename CharType = unsigned char>
-T
-deserialize_msgpack(const std::vector<CharType>& v)
-{
-  // The first byte in the array indicates the serialization format;
-  // the rest is the actual message
-  switch (v[0]) {
-    case serialization_type_byte(kMsgPack): {
-      try {
-        // The lambda function here is of type `unpack_reference_func`
-        // as described at
-        // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_unpacker#memory-management
-        // . It is called for every STR, BIN and EXT field in the
-        // MsgPack data. If the function returns false, the object is
-        // copied into MsgPack's "zone", otherwise a pointer to the
-        // original buffer is stored. Our input buffer is going to exist
-        // at least until the end of this function, so it's safe to
-        // return true (ie, store a pointer in the MsgPack object; no
-        // copy) everywhere. Doing so results in a factor ~2 speedup in
-        // deserializing Fragment, which is just a large BIN field
-        msgpack::object_handle oh = msgpack::unpack(
-          const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)),
-          v.size() - 1,
-          [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool { return true; });
-        msgpack::object obj = oh.get();
-        return obj.as<T>();
-      } catch (msgpack::type_error& e) {
-        throw CannotDeserializeMessage(ERS_HERE, e);
-      } catch (msgpack::unpack_error& e) {
-        throw CannotDeserializeMessage(ERS_HERE, e);
-      }
+      return deserialize_msgpack<T>(v);
     }
     default:
       throw UnknownSerializationTypeByte(ERS_HERE, (char)v[0]); // NOLINT
