@@ -15,7 +15,6 @@
 #define SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZE_VARIANT_HPP_
 
 #include "msgpack.hpp"
-#include "nlohmann/json.hpp"
 
 #include <iostream>
 #include <utility>
@@ -100,44 +99,5 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
   } // namespace adaptor
 } // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 } // namespace msgpack
-
-// nlohmann::json version adapted from
-// https://github.com/nlohmann/json/issues/1261#issuecomment-426209912
-namespace nlohmann {
-template<typename... Args>
-struct adl_serializer<std::variant<Args...>>
-{
-  // Base case for the variadic template function below. Should never be
-  // called, but the compiler needs to see it
-  template<typename VariantType>
-  static void set_variant_helper(std::size_t, nlohmann::json const&, VariantType&&)
-  {}
-
-  template<typename VariantType, typename T, typename... Types>
-  static void set_variant_helper(std::size_t i, nlohmann::json const& j, VariantType&& v)
-  {
-    if (i == 0)
-      v = j.get<T>();
-    else
-      set_variant_helper<VariantType, Types...>(i - 1, j, v);
-  }
-
-  static void to_json(json& j, std::variant<Args...> const& v)
-  {
-    std::visit(
-      [&](auto&& value) {
-        j["index"] = v.index();
-        j["value"] = std::forward<decltype(value)>(value);
-      },
-      v);
-  }
-
-  static void from_json(json const& j, std::variant<Args...>& v)
-  {
-    auto const index = j.at("index").get<int>();
-    set_variant_helper<std::variant<Args...>&, Args...>(index, j.at("value"), v);
-  }
-};
-} // namespace nlohmann
 
 #endif // SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZE_VARIANT_HPP_

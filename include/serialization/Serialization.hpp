@@ -15,7 +15,6 @@
 
 #include "boost/preprocessor.hpp"
 #include "msgpack.hpp"
-#include "nlohmann/json.hpp"
 
 #include <algorithm>
 #include <string>
@@ -56,7 +55,7 @@
 // NOLINTNEXTLINE(build/define_used)
 #define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
   MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
-  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, __VA_ARGS__)
+  static_assert(true, "")
 
 // Helper macros for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
 // NOLINTNEXTLINE(build/define_used)
@@ -87,9 +86,6 @@
 // NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
   DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                              \
-  namespace NS {                                                                                                       \
-  NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Type, __VA_ARGS__)                                                                \
-  }                                                                                                                    \
   namespace msgpack {                                                                                                  \
   MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)                                                                \
   {                                                                                                                    \
@@ -159,15 +155,13 @@ namespace serialization {
 
 template<typename T>
 struct is_serializable : std::false_type
-{
-};
+{};
 
 /**
  * @brief Serialization methods that are available
  */
 enum SerializationType
 {
-  kJSON,
   kMsgPack
 };
 
@@ -177,8 +171,6 @@ enum SerializationType
 inline SerializationType
 from_string(const std::string s)
 {
-  if (s == "json")
-    return kJSON;
   if (s == "msgpack")
     return kMsgPack;
   throw UnknownSerializationTypeString(ERS_HERE, s);
@@ -188,8 +180,6 @@ constexpr uint8_t // NOLINT(build/unsigned)
 serialization_type_byte(SerializationType stype)
 {
   switch (stype) {
-    case kJSON:
-      return 'J';
     case kMsgPack:
       return 'M';
     default:
@@ -205,14 +195,6 @@ std::vector<uint8_t> // NOLINT(build/unsigned)
 serialize(const T& obj, SerializationType stype)
 {
   switch (stype) {
-    case kJSON: {
-      nlohmann::json j = obj;
-      nlohmann::json::string_t s = j.dump();
-      std::vector<uint8_t> ret(s.size() + 1); // NOLINT(build/unsigned)
-      ret[0] = serialization_type_byte(stype);
-      std::copy(s.begin(), s.end(), ret.begin() + 1); // NOLINT
-      return ret;
-    }
     case kMsgPack: {
       // Serialize into the sbuffer and then copy to a
       // std::vector. Seems like it would be more efficient to
@@ -238,19 +220,9 @@ template<class T, typename CharType = unsigned char>
 T
 deserialize(const std::vector<CharType>& v)
 {
-  using json = nlohmann::json;
-
   // The first byte in the array indicates the serialization format;
   // the rest is the actual message
   switch (v[0]) {
-    case serialization_type_byte(kJSON): {
-      try {
-        json j = json::parse(v.begin() + 1, v.end());
-        return j.get<T>();
-      } catch (json::exception& e) {
-        throw CannotDeserializeMessage(ERS_HERE, e);
-      }
-    }
     case serialization_type_byte(kMsgPack): {
       try {
         // The lambda function here is of type `unpack_reference_func`

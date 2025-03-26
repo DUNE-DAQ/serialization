@@ -79,9 +79,9 @@ roundtrip(dunedaq::serialization::SerializationType& stype)
 int
 main()
 {
-  // Test all four combinations of { intrusive, non-intrusive } x { msgpack, json }
+  // Test both combinations of { intrusive, non-intrusive } x { msgpack }
   bool ok = true;
-  for (auto stype : { dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }) {
+  for (auto stype : { dunedaq::serialization::kMsgPack}) {
     ok = ok && roundtrip<myns::MyTypeIntrusive>(stype);
     ok = ok && roundtrip<myns::MyTypeNonIntrusive>(stype);
   }
