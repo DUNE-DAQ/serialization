@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_SUITE(Serialization_test)
  * @brief Check that we can serialize -> deserialize and get back what we started with
  */
 BOOST_DATA_TEST_CASE(SerializationRoundTrip,
-                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }))
+                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
 {
 
   MyTypeIntrusive m;
@@ -68,7 +68,7 @@ BOOST_DATA_TEST_CASE(SerializationRoundTrip,
 }
 
 BOOST_DATA_TEST_CASE(SerializeVariant,
-                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack, dunedaq::serialization::kJSON }))
+                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
 {
   MyTypeIntrusive m;
   m.count = 3;
@@ -123,16 +123,12 @@ BOOST_AUTO_TEST_CASE(InvalidSerializationTypes)
   BOOST_CHECK_THROW(dunedaq::serialization::deserialize<int>(invalid_message),
                     dunedaq::serialization::UnknownSerializationTypeByte);
 
-  std::vector<char> invalid_json_message = { 'J', ']', '[', '4' };
-  BOOST_CHECK_THROW(dunedaq::serialization::deserialize<int>(invalid_json_message),
-                    dunedaq::serialization::CannotDeserializeMessage);
-
   // An invalid msgpack message: we have our serialization type byte,
   // 'M', followed by 0xce, which indicates that a four-byte integer
   // follows. But we only have two more bytes after that, so the
   // message is invalid
   std::vector<unsigned char> invalid_msgpack_message = { 'M', 0xce, 0x0, 0x0 };
-  BOOST_CHECK_THROW(dunedaq::serialization::deserialize<int>(invalid_json_message),
+  BOOST_CHECK_THROW(dunedaq::serialization::deserialize<int>(invalid_msgpack_message),
                     dunedaq::serialization::CannotDeserializeMessage);
 }
 

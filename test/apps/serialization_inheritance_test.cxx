@@ -21,14 +21,12 @@ struct Base
 {
   int i;
   //  MSGPACK_DEFINE(i)
-  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Base, i);
 };
 
 struct Derived : public Base
 {
   std::string s;
   // MSGPACK_DEFINE(s, MSGPACK_BASE(Base))
-  NLOHMANN_DEFINE_TYPE_INTRUSIVE(Derived, s);
 };
 
 // These two functions provide the serialization/deserialization

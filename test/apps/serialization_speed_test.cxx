@@ -9,9 +9,6 @@
 
 #include "logging/Logging.hpp"
 #include "serialization/Serialization.hpp"
-#include "serialization/fsd/MsgP.hpp"
-#include "serialization/fsd/Nljs.hpp"
-#include "serialization/fsd/Structs.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -20,6 +17,33 @@
 #include <vector>
 
 using namespace std::chrono_literals;
+
+namespace dunedaq::serialization::fsd {
+
+enum Fakeness
+{
+  Unknown,
+  Fake,
+  SuperFake
+};
+
+struct FakeData
+{
+  int32_t fake_count;
+
+  DUNE_DAQ_SERIALIZE(FakeData, fake_count);
+};
+
+struct AnotherFakeData {
+  int32_t fake_count;
+  int64_t fake_timestamp;
+  std::vector<FakeData> fake_datas;
+  Fakeness fakeness;
+
+  DUNE_DAQ_SERIALIZE(AnotherFakeData, fake_count, fake_timestamp, fake_datas, fakeness);
+};
+}
+MSGPACK_ADD_ENUM(dunedaq::serialization::fsd::Fakeness)
 
 using AnotherFakeData = dunedaq::serialization::fsd::AnotherFakeData;
 using FakeData = dunedaq::serialization::fsd::FakeData;
@@ -62,6 +86,4 @@ main()
 {
   TLOG() << "MsgPack:";
   time_serialization(dunedaq::serialization::kMsgPack);
-  TLOG() << "JSON:";
-  time_serialization(dunedaq::serialization::kJSON);
 }
