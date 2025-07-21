@@ -49,7 +49,8 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
     // called, but the compiler needs to see it
     template<typename VariantType>
     void set_variant_helper(std::size_t, msgpack::object const&, VariantType&&) const
-    {}
+    {
+    }
 
     // Deserializing std::variant is tricky, because we only know the
     // index of the type that's held at runtime. We want something that is effectively:

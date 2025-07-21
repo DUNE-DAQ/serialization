@@ -5,6 +5,13 @@
  * This is part of the DUNE DAQ Application Framework, copyright 2020.
  * Licensing/copyright details are in the COPYING file that you should have
  * received with this code.
+ *
+ * Serialization methods are defined here, currently only MsgPack is supported.
+ * For an example of how nlohmann::json was implemented, look at tag v1.4.0 of this file:
+ *  https://github.com/DUNE-DAQ/serialization/blob/v1.4.0/include/serialization/Serialization.hpp
+ * In general, the DUNE_DAQ_SERIALIZE and DUNE_DAQ_SERIALIZE_NON_INTRUSIVE macros need
+ * to have definitions for the seralizer, and the serialize and deseralize methods need
+ * a case for each serialization type.
  */
 
 #ifndef SERIALIZATION_INCLUDE_SERIALIZATION_SERIALIZATION_HPP_
@@ -20,6 +27,11 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief Declare the datatype_to_string method for the given type
+ * @param Type C++ class
+ * @param typestring String representation for this class
+ */
 #define DUNE_DAQ_TYPESTRING(Type, typestring)                                                                          \
   template<>                                                                                                           \
   inline std::string dunedaq::datatype_to_string<Type>()                                                               \
@@ -27,6 +39,9 @@
     return typestring;                                                                                                 \
   }
 
+/**
+ * @brief Macro to define a type as serializable, so it can be sent over the network
+ */
 #define DUNE_DAQ_SERIALIZABLE(Type, typestring)                                                                        \
   DUNE_DAQ_TYPESTRING(Type, typestring)                                                                                \
   template<>                                                                                                           \
@@ -57,9 +72,10 @@
   MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
   static_assert(true, "")
 
-// Helper macros for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
+/// Helper macro for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
 // NOLINTNEXTLINE(build/define_used)
 #define OPACK(r, data, elem) o.pack(m.elem);
+/// Helper maro for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE
 // NOLINTNEXTLINE
 #define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
 
@@ -119,29 +135,22 @@
   }                                                                                                                    \
   }
 
+/**
+ * @brief Macro to declare an enum type to the serialization library
+ */
+#define DUNE_DAQ_SERIALIZE_ENUM(Type) MSGPACK_ADD_ENUM(Type)
+
 namespace dunedaq {
 
-// clang-format off
 // Disable coverage collection LCOV_EXCL_START
-ERS_DECLARE_ISSUE(serialization,                        // namespace
-                  UnknownSerializationTypeString,       // issue name
-                  "Unknown serialization type " << t,   // message
-                  ((std::string)t))                     // attributes
-
-ERS_DECLARE_ISSUE(serialization,                        // namespace
-                  UnknownSerializationTypeEnum,         // issue name
-                  "Unknown serialization type",)        // message
-
-ERS_DECLARE_ISSUE(serialization,                        // namespace
-                  UnknownSerializationTypeByte,         // issue name
-                  "Unknown serialization type " << t,   // message
-                  ((char)t))                            // attributes // NOLINT
-
-ERS_DECLARE_ISSUE(serialization,                        // namespace
-                  CannotDeserializeMessage,             // issue name
-                  "Cannot deserialize message",)        // message
-
-// clang-format on
+/// Issue for when the serialization type cannot be determined from an input string
+ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeString, "Unknown serialization type " << t, ((std::string)t))
+/// Issue for when the serialization type byte cannot be determined from the SerializationType enum
+ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeEnum, "Unknown serialization type", )
+/// Issue for when the serialization type cannot be determined from the given type byte
+ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeByte, "Unknown serialization type " << t, ((char)t))
+/// Issue for when the message cannot be deserialized properly
+ERS_DECLARE_ISSUE(serialization, CannotDeserializeMessage, "Cannot deserialize message", )
 // Re-enable coverage collection LCOV_EXCL_STOP
 
 template<typename T>
@@ -187,12 +196,14 @@ serialization_type_byte(SerializationType stype)
   }
 }
 
+constexpr SerializationType DEFAULT_SERIALIZATION_TYPE = kMsgPack;
+
 /**
  * @brief Serialize object @p obj using serialization method @p stype
  */
 template<class T>
 std::vector<uint8_t> // NOLINT(build/unsigned)
-serialize(const T& obj, SerializationType stype)
+serialize(const T& obj, SerializationType stype = DEFAULT_SERIALIZATION_TYPE)
 {
   switch (stype) {
     case kMsgPack: {

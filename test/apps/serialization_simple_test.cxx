@@ -81,7 +81,7 @@ main()
 {
   // Test both combinations of { intrusive, non-intrusive } x { msgpack }
   bool ok = true;
-  for (auto stype : { dunedaq::serialization::kMsgPack}) {
+  for (auto stype : { dunedaq::serialization::kMsgPack }) {
     ok = ok && roundtrip<myns::MyTypeIntrusive>(stype);
     ok = ok && roundtrip<myns::MyTypeNonIntrusive>(stype);
   }

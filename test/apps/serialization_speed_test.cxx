@@ -34,7 +34,8 @@ struct FakeData
   DUNE_DAQ_SERIALIZE(FakeData, fake_count);
 };
 
-struct AnotherFakeData {
+struct AnotherFakeData
+{
   int32_t fake_count;
   int64_t fake_timestamp;
   std::vector<FakeData> fake_datas;

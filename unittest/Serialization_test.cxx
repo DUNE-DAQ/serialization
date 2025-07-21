@@ -48,8 +48,7 @@ BOOST_AUTO_TEST_SUITE(Serialization_test)
 /**
  * @brief Check that we can serialize -> deserialize and get back what we started with
  */
-BOOST_DATA_TEST_CASE(SerializationRoundTrip,
-                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
+BOOST_DATA_TEST_CASE(SerializationRoundTrip, boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
 {
 
   MyTypeIntrusive m;
@@ -67,8 +66,7 @@ BOOST_DATA_TEST_CASE(SerializationRoundTrip,
   BOOST_CHECK_EQUAL_COLLECTIONS(m_recv.values.begin(), m_recv.values.end(), m.values.begin(), m.values.end());
 }
 
-BOOST_DATA_TEST_CASE(SerializeVariant,
-                     boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
+BOOST_DATA_TEST_CASE(SerializeVariant, boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
 {
   MyTypeIntrusive m;
   m.count = 3;
