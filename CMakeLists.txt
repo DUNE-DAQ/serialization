@@ -21,13 +21,6 @@ daq_add_library(LINK_LIBRARIES msgpackc-cxx logging::logging)
 
 ##############################################################################
 
-# Test applications
-daq_add_application( serialization_speed_test serialization_speed_test.cxx TEST LINK_LIBRARIES serialization)
-daq_add_application( serialization_simple_test serialization_simple_test.cxx TEST LINK_LIBRARIES serialization)
-daq_add_application( serialization_inheritance_test serialization_inheritance_test.cxx TEST LINK_LIBRARIES serialization)
-
-##############################################################################
-
 # Unit tests
 
 daq_add_unit_test(Serialization_test  LINK_LIBRARIES serialization)

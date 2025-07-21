@@ -43,6 +43,31 @@ struct MyTypeNonIntrusive
 
 DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(test, MyTypeNonIntrusive, a_float, values)
 
+enum Fakeness
+{
+  Unknown,
+  Fake,
+  SuperFake
+};
+DUNE_DAQ_SERIALIZE_ENUM(Fakeness)
+
+struct FakeData
+{
+  int32_t fake_count;
+
+  DUNE_DAQ_SERIALIZE(FakeData, fake_count);
+};
+
+struct AnotherFakeData
+{
+  int32_t fake_count;
+  int64_t fake_timestamp;
+  std::vector<FakeData> fake_datas;
+  Fakeness fakeness;
+
+  DUNE_DAQ_SERIALIZE(AnotherFakeData, fake_count, fake_timestamp, fake_datas, fakeness);
+};
+
 BOOST_AUTO_TEST_SUITE(Serialization_test)
 
 /**
@@ -128,6 +153,31 @@ BOOST_AUTO_TEST_CASE(InvalidSerializationTypes)
   std::vector<unsigned char> invalid_msgpack_message = { 'M', 0xce, 0x0, 0x0 };
   BOOST_CHECK_THROW(dunedaq::serialization::deserialize<int>(invalid_msgpack_message),
                     dunedaq::serialization::CannotDeserializeMessage);
+}
+
+BOOST_DATA_TEST_CASE(SerializationSpeedTest, boost::unit_test::data::make({ dunedaq::serialization::kMsgPack }))
+{
+  const int N = 1000000;
+  int total = 0;
+  auto start_time = std::chrono::steady_clock::now();
+  AnotherFakeData fd;
+  for (int i = 0; i < 20; ++i) {
+    fd.fake_datas.push_back(FakeData{ 3 });
+  }
+  for (int i = 0; i < N; ++i) {
+    fd.fake_count = i;
+    fd.fakeness = Fakeness::SuperFake;
+    std::vector<uint8_t> bytes = dunedaq::serialization::serialize(fd, sample); // NOLINT(build/unsigned)
+    AnotherFakeData fd_recv = dunedaq::serialization::deserialize<AnotherFakeData>(bytes);
+    total += fd_recv.fake_count;
+  }
+  TLOG() << "total: " << total;
+  auto end_time = std::chrono::steady_clock::now();
+  double time_taken_s =
+    std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(end_time - start_time).count();
+  double kHz = 1e-3 * N / time_taken_s;
+  TLOG() << "Sent " << N << " messages in " << time_taken_s << "s (" << kHz << " kHz)";
+  BOOST_REQUIRE(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
