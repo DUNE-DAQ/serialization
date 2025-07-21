@@ -9,6 +9,8 @@
 #include "serialization/Serialization.hpp"
 #include "serialization/serialize_variant.hpp"
 
+#include "logging/Logging.hpp"
+
 /**
  * @brief Name of this test module
  */
@@ -171,12 +173,12 @@ BOOST_DATA_TEST_CASE(SerializationSpeedTest, boost::unit_test::data::make({ dune
     AnotherFakeData fd_recv = dunedaq::serialization::deserialize<AnotherFakeData>(bytes);
     total += fd_recv.fake_count;
   }
-  TLOG() << "total: " << total;
+  TLOG(TLVL_INFO) << "total: " << total;
   auto end_time = std::chrono::steady_clock::now();
   double time_taken_s =
     std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(end_time - start_time).count();
   double kHz = 1e-3 * N / time_taken_s;
-  TLOG() << "Sent " << N << " messages in " << time_taken_s << "s (" << kHz << " kHz)";
+  TLOG(TLVL_INFO) << "Sent " << N << " messages in " << time_taken_s << "s (" << kHz << " kHz)";
   BOOST_REQUIRE(true);
 }
 

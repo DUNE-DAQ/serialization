@@ -32,6 +32,7 @@
  * @param Type C++ class
  * @param typestring String representation for this class
  */
+// NOLINTNEXTLINE
 #define DUNE_DAQ_TYPESTRING(Type, typestring)                                                                          \
   template<>                                                                                                           \
   inline std::string dunedaq::datatype_to_string<Type>()                                                               \
@@ -42,6 +43,7 @@
 /**
  * @brief Macro to define a type as serializable, so it can be sent over the network
  */
+// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZABLE(Type, typestring)                                                                        \
   DUNE_DAQ_TYPESTRING(Type, typestring)                                                                                \
   template<>                                                                                                           \
@@ -67,13 +69,13 @@
  *      };
  *
  */
-// NOLINTNEXTLINE(build/define_used)
+// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
   MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
   static_assert(true, "")
 
 /// Helper macro for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
-// NOLINTNEXTLINE(build/define_used)
+// NOLINTNEXTLINE
 #define OPACK(r, data, elem) o.pack(m.elem);
 /// Helper maro for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE
 // NOLINTNEXTLINE
@@ -138,6 +140,7 @@
 /**
  * @brief Macro to declare an enum type to the serialization library
  */
+// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_ENUM(Type) MSGPACK_ADD_ENUM(Type)
 
 namespace dunedaq {
@@ -148,7 +151,7 @@ ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeString, "Unknown serial
 /// Issue for when the serialization type byte cannot be determined from the SerializationType enum
 ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeEnum, "Unknown serialization type", )
 /// Issue for when the serialization type cannot be determined from the given type byte
-ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeByte, "Unknown serialization type " << t, ((char)t))
+ERS_DECLARE_ISSUE(serialization, UnknownSerializationTypeByte, "Unknown serialization type " << t, ((char)t)) // NOLINT
 /// Issue for when the message cannot be deserialized properly
 ERS_DECLARE_ISSUE(serialization, CannotDeserializeMessage, "Cannot deserialize message", )
 // Re-enable coverage collection LCOV_EXCL_STOP
@@ -248,7 +251,7 @@ deserialize(const std::vector<CharType>& v)
         // copy) everywhere. Doing so results in a factor ~2 speedup in
         // deserializing Fragment, which is just a large BIN field
         msgpack::object_handle oh = msgpack::unpack(
-          const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)),
+          const_cast<char*>(reinterpret_cast<const char*>(v.data() + 1)), // NOLINT
           v.size() - 1,
           [](msgpack::type::object_type /*typ*/, std::size_t /*length*/, void* /*user_data*/) -> bool { return true; });
         msgpack::object obj = oh.get();
