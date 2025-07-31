@@ -20,6 +20,7 @@
 #include <utility>
 #include <variant>
 
+// NOLINTNEXTLINE
 namespace msgpack {
 MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 {
@@ -49,7 +50,8 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
     // called, but the compiler needs to see it
     template<typename VariantType>
     void set_variant_helper(std::size_t, msgpack::object const&, VariantType&&) const
-    {}
+    {
+    }
 
     // Deserializing std::variant is tricky, because we only know the
     // index of the type that's held at runtime. We want something that is effectively:
@@ -73,7 +75,7 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
     void set_variant_helper(std::size_t i, msgpack::object const& o, VariantType&& v) const
     {
       if (i == 0)
-        v = o.via.array.ptr[1].as<T>();
+        v = o.via.array.ptr[1].as<T>(); // NOLINT
       else
         set_variant_helper<VariantType, Types...>(i - 1, o, v);
     }
@@ -87,7 +89,7 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
       // instance of the type itself (it *doesn't* depend sizeof...(Args))
       if (o.via.array.size != 2)
         throw msgpack::type_error();
-      std::size_t index = o.via.array.ptr[0].as<std::size_t>();
+      std::size_t index = o.via.array.ptr[0].as<std::size_t>(); // NOLINT
       if (index >= sizeof...(Args)) {
         throw msgpack::type_error();
       }
