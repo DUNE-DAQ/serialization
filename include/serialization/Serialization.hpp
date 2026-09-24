@@ -32,7 +32,7 @@
  * @param Type C++ class
  * @param typestring String representation for this class
  */
-// NOLINTNEXTLINE
+// NOLINTBEGIN
 #define DUNE_DAQ_TYPESTRING(Type, typestring)                                                                          \
   template<>                                                                                                           \
   inline std::string dunedaq::datatype_to_string<Type>()                                                               \
@@ -43,7 +43,6 @@
 /**
  * @brief Macro to define a type as serializable, so it can be sent over the network
  */
-// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZABLE(Type, typestring)                                                                        \
   DUNE_DAQ_TYPESTRING(Type, typestring)                                                                                \
   template<>                                                                                                           \
@@ -69,16 +68,13 @@
  *      };
  *
  */
-// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE(Type, ...)                                                                                  \
   MSGPACK_DEFINE(__VA_ARGS__)                                                                                          \
   static_assert(true, "")
 
 /// Helper macro for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE()
-// NOLINTNEXTLINE
 #define OPACK(r, data, elem) o.pack(m.elem);
 /// Helper maro for DUNE_DAQ_SERIALIZE_NON_INTRUSIVE
-// NOLINTNEXTLINE
 #define OUNPACK(r, data, elem) m.elem = o.via.array.ptr[i++].as<decltype(m.elem)>();
 
 /**
@@ -101,7 +97,6 @@
  *      DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(ns, MyType, i, s, v);
  *
  */
-// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_NON_INTRUSIVE(NS, Type, ...)                                                                \
   DUNE_DAQ_SERIALIZABLE(NS::Type, #Type);                                                                              \
   namespace msgpack {                                                                                                  \
@@ -135,13 +130,13 @@
     };                                                                                                                 \
     }                                                                                                                  \
   }                                                                                                                    \
-  }
+  } // namespace msgpack
 
 /**
  * @brief Macro to declare an enum type to the serialization library
  */
-// NOLINTNEXTLINE
 #define DUNE_DAQ_SERIALIZE_ENUM(Type) MSGPACK_ADD_ENUM(Type)
+// NOLINTEND
 
 namespace dunedaq {
 
